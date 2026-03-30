@@ -35,6 +35,7 @@ Provide one standalone skill manager that installs a valid agent skill into all 
 | Developer using one agent | Pass one or more `--target` values | I only install into the agents I actually use | P0 | Repeated `--target` flags install only for the selected adapters |
 | Skill author | Publish install instructions using `owner/repo` | Users can install from GitHub without copying clone URLs or tarball URLs | P0 | GitHub shorthand resolves and installs from the repo root when `SKILL.md` exists there |
 | Skill author with mono-repo skills | Publish install instructions using `owner/repo/path/to/skill` | Users can install a nested skill directory from a repo that contains multiple skills | P0 | GitHub shorthand with a trailing path resolves the nested directory and validates `SKILL.md` there |
+| Skill author or maintainer | Run `validate REF` before publishing or installing a skill | I can confirm the source resolves to a structurally valid skill and see what is wrong if it does not | P0 | `validate` accepts the same source reference forms as `install`; exits `0` for a valid skill and non-zero for an invalid or unresolved source; returns structured validation output in machine mode and a pass/fail report in human mode |
 | Maintainer | Add support for another agent without rewriting the install pipeline | The project can grow to support more agents cleanly | P1 | New agent support is implemented by adding one adapter and tests |
 | Developer updating a skill | Run `update` against all supported agents | Installed copies are replaced consistently | P1 | Update reuses source resolution once and reports installed vs updated status per target |
 | Developer removing a skill | Run `uninstall <name>` with optional targets | I can remove one skill from all or some agents | P1 | Uninstall reports `uninstalled` or `not_installed` per target |
@@ -65,16 +66,20 @@ P0 requirements:
   - a local directory path containing `SKILL.md`
   - a GitHub shorthand in `owner/repo` form
   - a GitHub shorthand in `owner/repo/path/to/skill` form
+- `validate` must accept the same source reference forms as `install` and `update`.
 - `install`, `update`, and `uninstall` must accept repeated `--target` / `-t` flags.
 - When no targets are provided, the command must behave as if `--target all` were passed.
+- `--target all` is mutually exclusive with any explicit non-`all` target; `--target all --target codex` must be rejected as invalid user input.
 - `all` must resolve dynamically to every adapter bundled by the running version of the package.
 - Initial bundled adapters must cover `claude`, `codex`, and `openclaw`.
 - Each bundled adapter must declare its support status on Windows, Linux, and macOS.
 - The CLI must report whether a target is unavailable because the adapter is unsupported on the current OS, the agent install root is unknown, or the local environment is missing required directories.
 - The installer must validate the selected skill directory before copying it into any target.
-- Each command must return structured per-target results including target name, destination path, and status.
+- Target-oriented commands (`install`, `update`, `uninstall`, `list`, and `show`) must return structured per-target results including target name, destination path when applicable, and status.
+- `validate` must return structured validation results that include the normalized source kind, the resolved skill metadata when valid, and one or more validation errors when invalid.
 - The CLI must expose both machine-readable output and a human-readable table view.
 - GitHub shorthand parsing must treat the first two path segments as `owner` and `repo`, with the remaining suffix interpreted as the nested skill directory path.
+- Source resolution must disambiguate local paths and GitHub shorthands by checking for an existing local path first after shell-style path expansion and normalization; only non-existent local paths may fall through to GitHub shorthand parsing.
 - Path resolution and filesystem operations must work correctly on Windows, Linux, and macOS, including home-directory expansion and platform-native path separators.
 
 P1 requirements:

@@ -25,6 +25,7 @@ Windows, Linux, and macOS are all first-class platforms in this design. That doe
 
 - **Source resolver (`skill_mgr.sources`)**
   - Parses input refs into `LocalSource` or `GitHubSource`.
+  - Checks for an existing normalized local path before attempting GitHub shorthand parsing.
   - Downloads and safely extracts GitHub archives into a temp directory when needed.
   - Resolves nested repo paths from `owner/repo/path/to/skill`.
 
@@ -140,6 +141,8 @@ Rules:
 - `SUBPATH`, when present, may contain one or more additional segments.
 - `owner/repo` means the skill lives at the repository root.
 - `owner/repo/dir` or `owner/repo/path/to/dir` means the skill lives under that nested directory.
+- After home expansion and path normalization, an existing local path takes precedence over GitHub shorthand parsing.
+- `all` is mutually exclusive with explicit non-`all` targets; mixed usage must be rejected before service execution.
 
 ### Service contract: install/update result
 
@@ -164,7 +167,7 @@ Rules:
 }
 ```
 
-### Service contract: list/show
+### Service contract: list
 
 ```json
 {
@@ -177,6 +180,86 @@ Rules:
       "status": "installed"
     }
   ]
+}
+```
+
+### Service contract: show
+
+```json
+{
+  "name": "example-skill",
+  "targets": [
+    {
+      "target": "claude",
+      "path": "/home/user/.claude/skills/example-skill",
+      "status": "installed",
+      "metadata": {
+        "name": "example-skill",
+        "description": "Example description"
+      }
+    },
+    {
+      "target": "codex",
+      "path": null,
+      "status": "not_installed",
+      "metadata": null
+    }
+  ]
+}
+```
+
+### Service contract: validate
+
+Success:
+
+```json
+{
+  "ref": "owner/repo/path/to/skill",
+  "source": {
+    "kind": "github",
+    "repository": "owner/repo",
+    "subpath": "path/to/skill"
+  },
+  "valid": true,
+  "skill": {
+    "name": "example-skill",
+    "description": "Example description"
+  },
+  "errors": []
+}
+```
+
+Failure:
+
+```json
+{
+  "ref": "owner/repo/path/to/skill",
+  "source": {
+    "kind": "github",
+    "repository": "owner/repo",
+    "subpath": "path/to/skill"
+  },
+  "valid": false,
+  "skill": null,
+  "errors": [
+    {
+      "code": "missing_skill_md",
+      "message": "Resolved directory does not contain SKILL.md."
+    }
+  ]
+}
+```
+
+### Shared top-level error contract
+
+Source-resolution failures that occur before a validated skill directory exists should abort the command and return a top-level error rather than synthetic per-target statuses. This applies to shared GitHub download failures such as timeouts, 404s, and rate limiting.
+
+```json
+{
+  "error": {
+    "code": "github_rate_limited",
+    "message": "GitHub archive download failed before target processing began."
+  }
 }
 ```
 
@@ -196,7 +279,9 @@ Rules:
 | Field | Type | Description |
 |-------|------|-------------|
 | name | string | Stable target name used by CLI |
-| install_root | Path | Base directory that contains installed skills |
+| support_by_os | dict[str, string] | Per-OS support state keyed by `windows`, `linux`, and `macos` |
+| install_root_by_os | dict[str, string \| null] | Platform-specific install root template or null when unsupported |
+| install_root | Path \| null | Runtime-resolved install root for the current OS, derived from `install_root_by_os[current_os]` after environment expansion |
 | available | bool | Whether the adapter is usable on the current machine |
 | availability_reason | string \| null | Explanation when unavailable |
 
@@ -217,7 +302,7 @@ Rules:
 | windows | string | `supported`, `unsupported`, or `unknown` |
 | linux | string | `supported`, `unsupported`, or `unknown` |
 | macos | string | `supported`, `unsupported`, or `unknown` |
-| install_root_by_os | dict[str, str \| null] | Platform-specific install root template or null when unsupported |
+| install_root_by_os | dict[str, str \| null] | Platform-specific install root template or null when unsupported; this is the source of truth used to derive `AgentAdapter.install_root` |
 
 ### Initial adapter matrix
 
@@ -239,6 +324,7 @@ Before alpha release, each `To verify` cell should become `supported` or `unsupp
 - Sanitize GitHub shorthand parsing and refuse empty owner, repo, or subpath segments.
 - Avoid logging secrets or authentication headers if authenticated GitHub access is added later.
 - Handle Windows path normalization carefully so adapter-root containment checks cannot be bypassed through drive-letter or separator differences.
+- Surface GitHub archive download failures as top-level command errors with stable codes such as `github_not_found`, `github_timeout`, or `github_rate_limited`; do not emit partial per-target results when source resolution fails before installation starts.
 
 ## Performance Considerations
 

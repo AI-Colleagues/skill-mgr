@@ -33,7 +33,9 @@ Plan to build `skill-mgr` as an independent multi-agent skill installer with an 
   - Dependencies: Task 1.1
 - [ ] Task 1.3: Confirm Windows, Linux, and macOS support expectations for each initial adapter and publish the initial OS support matrix
   - Dependencies: Task 1.2
-- [ ] Task 1.4: Create the package/module skeleton for CLI, adapters, sources, validation, and services
+- [ ] Task 1.4: Document the `SKILL.md` format contract, including required fields and the checks enforced by `validate`
+  - Dependencies: Task 1.1, Task 1.2
+- [ ] Task 1.5: Create the package/module skeleton for CLI, adapters, sources, validation, and services
   - Dependencies: Task 1.2
 
 ---
@@ -46,10 +48,10 @@ Plan to build `skill-mgr` as an independent multi-agent skill installer with an 
 
 - [ ] Task 2.1: Implement the adapter registry with bundled `claude`, `codex`, and `openclaw` adapters
   - Dependencies: Milestone 1
-- [ ] Task 2.2: Encode per-OS install roots and support states inside each bundled adapter
+- [ ] Task 2.2: Encode per-OS install roots, support states, and runtime availability mapping inside each bundled adapter
   - Dependencies: Task 2.1
 - [ ] Task 2.3: Implement local directory validation and install/update/uninstall services
-  - Dependencies: Task 2.1, Task 2.2
+  - Dependencies: Task 1.4, Task 2.1, Task 2.2
 - [ ] Task 2.4: Implement CLI commands and human/JSON output rendering, including explicit unsupported-OS messaging
   - Dependencies: Task 2.3
 - [ ] Task 2.5: Add unit and temp-home integration tests for local installs across bundled adapters on Windows, Linux, and macOS
@@ -82,12 +84,12 @@ Plan to build `skill-mgr` as an independent multi-agent skill installer with an 
 
 - [ ] Task 4.1: Implement `list` and `show` across one or more selected targets
   - Dependencies: Milestone 2
-- [ ] Task 4.2: Add adapter availability statuses and graceful handling for unsupported platforms
-  - Dependencies: Task 2.1
+- [ ] Task 4.2: Audit bundled adapters for release-ready availability metadata and confirm alpha docs match the implemented platform-skip behavior
+  - Dependencies: Task 2.5, Task 3.4
 - [ ] Task 4.3: Add CI jobs for Windows, Linux, and macOS with the relevant lint and test commands
   - Dependencies: Milestone 3, Task 4.1, Task 4.2
 - [ ] Task 4.4: Run lint, format, and the relevant test suite in CI-parity commands across all three operating systems
-  - Dependencies: Milestone 3, Task 4.1, Task 4.2
+  - Dependencies: Milestone 3, Task 4.1, Task 4.2, Task 4.3
 - [ ] Task 4.5: Cut an alpha release and publish the initial supported-agent and OS support matrix
   - Dependencies: Task 4.4
 
