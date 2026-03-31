@@ -1,93 +1,156 @@
-# UV Template
+# skill-mgr
 
-[![CI](https://github.com/AI-Colleagues/uv-template/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/AI-Colleagues/uv-template/actions/workflows/ci.yml?query=branch%3Amain)
-[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/AI-Colleagues/uv-template.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/AI-Colleagues/uv-template)
-<!-- [![PyPI](https://img.shields.io/pypi/v/pydantic-ai.svg)](https://pypi.python.org/pypi/pydantic-ai) -->
-
-A modern Python project template with UV package management, pre-commit hooks for code quality, and documentation support via MkDocs.
-
-## Features
-
-- 📦 UV for package and project management
-- 🔍 Pre-commit hooks for code quality
-- 📚 Documentation setup with MkDocs Material theme
-- 🛠️ Makefile for common development tasks
-- ✨ Code quality tools:
-  - Black-compatible formatting (via Ruff)
-  - Import sorting (via Ruff)
-  - Type checking with mypy
-  - Comprehensive linting with Ruff
-- 📊 Testing setup with pytest and coverage reporting
+`skill-mgr` is a standalone multi-agent skill installer and inspector for AgentSkills-compatible `SKILL.md` packages. It installs one validated skill into bundled agent targets, supports local directories and GitHub shorthand refs, and exposes the same lifecycle surface as the Orcheo skill workflows: `install`, `update`, `uninstall`, `validate`, `list`, and `show`.
 
 ## Installation
 
 ```bash
-# Install dependencies
-uv sync
+uv sync --all-groups
+```
+
+The CLI entrypoint is:
+
+```bash
+uv run skill-mgr -h
+```
+
+## Commands
+
+```text
+skill-mgr install REF [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr update REF [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr uninstall NAME [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr validate REF [--format rich|markdown|json]
+skill-mgr list [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr show NAME [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr support-matrix [--format rich|markdown|json]
+```
+
+Rules:
+
+- Repeated `--target/-t` values are allowed.
+- Omitting `--target` installs to bundled agents detected in the current environment.
+- Explicit `--target` values bypass detection and are still honored even if the agent home directory does not exist yet.
+- `all` is mutually exclusive with explicit targets.
+- Rich-rendered human output is the default.
+- Use `--format markdown` for plain-text Markdown tables that are easier for LLMs and other text consumers to parse.
+- Use `--format json` for strict structured output.
+
+## Source Refs
+
+Supported `REF` forms:
+
+- Local skill directory path containing `SKILL.md`
+- GitHub shorthand `owner/repo`
+- GitHub shorthand `owner/repo/path/to/skill`
+
+Resolution behavior:
+
+- Existing local paths always win after home expansion and normalization.
+- Only non-existent local refs fall through to GitHub shorthand parsing.
+- GitHub installs resolve the repository default branch via the GitHub API, download one tarball, safely extract it once, then reuse the materialized skill directory across all selected targets.
+- Nested GitHub paths must resolve to a directory inside the archive.
+
+## Initial OS Support Matrix
+
+The bundled adapters currently publish this matrix:
+
+| Adapter | Windows | Linux | macOS | Managed install root | Notes |
+|---------|---------|-------|-------|----------------------|-------|
+| `claude` | supported | supported | supported | `~/.claude/skills` | Home-relative managed skill root used by the adapter |
+| `codex` | supported | supported | supported | `~/.codex/skills` | Matches the local Codex skill layout used by the app/CLI |
+| `openclaw` | supported | supported | supported | `~/.openclaw/skills` | Matches OpenClaw's documented managed/local skills directory |
+| `orcheo` | supported | supported | supported | `~/.orcheo/skills` | Matches Orcheo's managed local skills directory |
+
+Platform semantics:
+
+- `supported`: the adapter has a defined install root and is expected to work on that OS.
+- `unsupported`: the adapter is intentionally skipped on that OS.
+- `unknown`: the adapter root is not yet defined and the target is skipped with `unknown_install_root`.
+- `agent_not_detected`: the adapter is bundled, but its home directory was not found during default target selection.
+
+Current bundled adapters all map to explicit home-relative roots. Explicit `--target all` expands to `claude`, `codex`, `openclaw`, and `orcheo` on Windows, Linux, and macOS, while the default target set only includes agents detected on the current machine.
+
+## `SKILL.md` Contract
+
+`validate` enforces the following `SKILL.md` contract:
+
+- `SKILL.md` must exist at the resolved skill directory root.
+- The file must start with valid YAML frontmatter delimited by `---` lines.
+- `name` is required.
+- `name` must be 1-64 characters of lowercase letters, numbers, and internal hyphens.
+- `description` is required and must be a non-empty string.
+- `license`, when present, must be a string.
+- `compatibility`, when present, must be a string.
+- `metadata`, when present, must be a mapping.
+- `allowed-tools`, when present, must be a string.
+
+Recognized fields are normalized into the validation output:
+
+- `name`
+- `description`
+- `license`
+- `compatibility`
+- `metadata`
+- `allowed-tools`
+
+Unknown frontmatter keys are preserved in `extra_fields` in the library result so downstream tools can retain adapter-specific metadata.
+
+Minimal valid example:
+
+```md
+---
+name: demo-skill
+description: Explain what the skill does and when to use it.
+---
+
+Skill instructions go here.
+```
+
+## Examples
+
+Install from a local directory into every bundled target:
+
+```bash
+uv run skill-mgr install ~/skills/demo-skill
+```
+
+Install only for Codex and Claude:
+
+```bash
+uv run skill-mgr install ~/skills/demo-skill -t codex -t claude
+```
+
+Install from a GitHub repo root:
+
+```bash
+uv run skill-mgr install owner/repo
+```
+
+Install from a nested GitHub skill directory:
+
+```bash
+uv run skill-mgr install owner/repo/skills/demo-skill
+```
+
+Validate without installing:
+
+```bash
+uv run skill-mgr validate owner/repo/skills/demo-skill --format markdown
+```
+
+List skills across bundled adapters:
+
+```bash
+uv run skill-mgr list
 ```
 
 ## Development
 
-This template includes several tools to ensure code quality and maintainability:
-
-- **UV**: Modern package and project management for Python 3.12+
-- **Pre-commit hooks**: Automated code quality checks
-- **MkDocs**: Documentation generation with Material theme and Python API docs support
-- **Ruff**: All-in-one Python linter and formatter with:
-  - Code style enforcement (PEP 8)
-  - Import sorting
-  - Complexity checking (McCabe)
-  - Docstring validation (Google style)
-  - And many more checks
-- **mypy**: Static type checking with strict settings
-- **Github Actions**:
-  - Release workflow on push tags
-
-### Code Quality Tools
-
-The template comes with pre-configured linting and formatting tools that run automatically on commit:
-
-- **Ruff Format**: Formats your code consistently (Black-compatible)
-- **Ruff Lint**: Comprehensive linting with multiple rule sets enabled:
-  - Code style (pycodestyle)
-  - Bugs and complexity (pyflakes, flake8-bugbear)
-  - Naming conventions (PEP 8)
-  - Import organization
-  - And more
-- **mypy**: Strict type checking with `disallow_untyped_defs=true`
-
-To manually run the tools:
 ```bash
-# Check code quality (ruff, mypy, and format check)
-make lint
-
-# Format code
 make format
-
-# Run tests with coverage report
+make lint
 make test
-
-# Serve documentation locally
-make doc
 ```
 
-You can also run individual tools directly with UV:
-```bash
-# Format and lint code
-ruff check .
-ruff format .
-
-# Type checking
-mypy .
-
-# Run tests with coverage
-pytest --cov --cov-report term-missing tests/
-```
-
-## Usage
-
-1. Clone this template
-2. Update the project details in `pyproject.toml`
-3. Start developing with the included tools
-
-For more detailed information, check the documentation.
+The CI workflow runs the same lint and test commands on Windows, Linux, and macOS.
