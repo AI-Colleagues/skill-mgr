@@ -1,8 +1,23 @@
 from __future__ import annotations
 from pathlib import Path
 import pytest
+import typer
 from typer.testing import CliRunner
-from skill_mgr.cli import app
+from skill_mgr.cli import (
+    OutputFormat,
+    _emit,
+    _exit_status,
+    _run_command,
+    app,
+    install,
+    list_skills,
+    show,
+    support_matrix,
+    uninstall,
+    update,
+    validate,
+)
+from skill_mgr.errors import SkillMgrError
 from tests.helpers import run, write_skill
 
 
@@ -71,3 +86,90 @@ def test_cli_invalid_source_returns_non_zero(
     captured = capsys.readouterr()
     assert status == 1
     assert "error" in captured.out.lower()
+
+
+def test_emit_dispatches_to_render_functions(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, bool]] = []
+
+    def fake_echo(value: str, **kwargs: object) -> None:
+        calls.append((value, kwargs.get("nl", True)))  # type: ignore[arg-type]
+
+    monkeypatch.setattr("typer.echo", fake_echo)
+    monkeypatch.setattr("skill_mgr.cli.render_json", lambda payload: "json-payload")
+    monkeypatch.setattr(
+        "skill_mgr.cli.render_markdown", lambda payload: "markdown-payload"
+    )
+    monkeypatch.setattr("skill_mgr.cli.render_rich", lambda payload: "rich-payload")
+
+    _emit({"a": 1}, output_format=OutputFormat.JSON)
+    _emit({"b": 2}, output_format=OutputFormat.MARKDOWN)
+    _emit({"c": 3}, output_format=OutputFormat.RICH)
+
+    assert calls == [
+        ("json-payload", True),
+        ("markdown-payload", True),
+        ("rich-payload", False),
+    ]
+
+
+def test_exit_status_checks_payloads() -> None:
+    assert _exit_status("validate", {"valid": True}) == 0
+    assert _exit_status("validate", {"valid": False}) == 1
+    assert _exit_status("show", {"targets": [{"status": "error"}]}) == 1
+    assert _exit_status("show", {"targets": [{"status": "installed"}]}) == 0
+
+
+def test_run_command_raises_on_operation_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    emitted: list[dict[str, object]] = []
+
+    def fake_emit(payload: dict[str, object], *, output_format: OutputFormat) -> None:
+        emitted.append(payload)
+
+    monkeypatch.setattr("skill_mgr.cli._emit", fake_emit)
+
+    def failing_operation() -> dict[str, object]:
+        raise SkillMgrError("boom", code="boom")
+
+    with pytest.raises(typer.Exit) as excinfo:
+        _run_command(
+            "validate", output_format=OutputFormat.JSON, operation=failing_operation
+        )
+    assert excinfo.value.exit_code == 1
+    assert emitted and emitted[0]["error"]["code"] == "boom"
+
+
+def test_run_command_raises_on_exit_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("skill_mgr.cli._emit", lambda payload, *, output_format: None)
+    monkeypatch.setattr("skill_mgr.cli._exit_status", lambda command, payload: 2)
+
+    with pytest.raises(typer.Exit) as excinfo:
+        _run_command(
+            "install", output_format=OutputFormat.RICH, operation=lambda: {"ok": True}
+        )
+    assert excinfo.value.exit_code == 2
+
+
+def test_cli_command_wrappers_use_run_command(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[str] = []
+
+    def fake_run(command: str, **kwargs: object) -> None:
+        calls.append(command)
+
+    monkeypatch.setattr("skill_mgr.cli._run_command", fake_run)
+    install("ref")
+    update("ref")
+    uninstall("name")
+    validate("ref")
+    list_skills()
+    show("name")
+    support_matrix()
+
+    assert calls == [
+        "install",
+        "update",
+        "uninstall",
+        "validate",
+        "list",
+        "show",
+        "support-matrix",
+    ]

@@ -42,8 +42,7 @@ _BUNDLED_ADAPTER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "macos": "{home}/.codex/skills",
         },
         "notes": (
-            "Matches the local Codex skills directory used by the desktop app and "
-            "CLI."
+            "Matches the local Codex skills directory used by the desktop app and CLI."
         ),
     },
     "openclaw": {

@@ -113,9 +113,7 @@ class SkillManagerService:
             )
         return {"action": "list", "targets": results}
 
-    def show(
-        self, name: str, *, targets: list[str] | None = None
-    ) -> dict[str, Any]:
+    def show(self, name: str, *, targets: list[str] | None = None) -> dict[str, Any]:
         """Show one skill across one or more targets."""
         resolved_targets = resolve_targets(targets)
         results: list[dict[str, Any]] = []
