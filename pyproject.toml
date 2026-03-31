@@ -31,7 +31,7 @@ description = "Standalone multi-agent skill manager for AgentSkills-compatible p
 name = "skill-mgr"
 readme = "README.md"
 requires-python = ">=3.12"
-version = "0.1.0"
+version = "0.1.1"
 
 [project.scripts]
 skill-mgr = "skill_mgr.main:main"
