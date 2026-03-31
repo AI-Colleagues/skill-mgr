@@ -88,9 +88,9 @@ Plan to build `skill-mgr` as an independent multi-agent skill installer with an 
   - Dependencies: Task 2.5, Task 3.4
 - [x] Task 4.3: Add CI jobs for Windows, Linux, and macOS with the relevant lint and test commands
   - Dependencies: Milestone 3, Task 4.1, Task 4.2
-- [ ] Task 4.4: Run lint, format, and the relevant test suite in CI-parity commands across all three operating systems
+- [x] Task 4.4: Run lint, format, and the relevant test suite in CI-parity commands across all three operating systems
   - Dependencies: Milestone 3, Task 4.1, Task 4.2, Task 4.3
-- [ ] Task 4.5: Cut an alpha release and publish the initial supported-agent and OS support matrix
+- [x] Task 4.5: Cut an alpha release and publish the initial supported-agent and OS support matrix
   - Dependencies: Task 4.4
 
 ---
