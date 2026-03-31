@@ -3,10 +3,21 @@ name: CI
 on:
   push:
     branches: ["main"]
+    tags:
+      - "v*"
   pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
+    if: github.event_name == 'pull_request' || github.ref_type != 'tag'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -23,3 +34,42 @@ jobs:
       - run: uv run ruff check .
       - run: uv run mypy .
       - run: uv run pytest
+
+  publish:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verify tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          data = tomllib.loads(Path("pyproject.toml").read_text())
+          print(data["project"]["version"])
+          PY
+          )"
+
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "Tag version ($TAG) does not match package version ($VERSION)." >&2
+            exit 1
+          fi
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Check distributions
+        run: uvx twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
