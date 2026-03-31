@@ -1,3 +1,7 @@
+[![CI](https://github.com/AI-Colleagues/skill-mgr/actions/workflows/ci.yml/badge.svg?event=push)](https://github.com/AI-Colleagues/skill-mgr/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/AI-Colleagues/skill-mgr.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/AI-Colleagues/skill-mgr)
+[![PyPI](https://img.shields.io/pypi/v/skill-mgr.svg)](https://pypi.python.org/pypi/skill-mgr)
+
 # skill-mgr
 
 `skill-mgr` is a standalone multi-agent skill installer and inspector for AgentSkills-compatible `SKILL.md` packages. It installs one validated skill into bundled agent targets, supports local directories and GitHub shorthand refs, and exposes the same lifecycle surface as the Orcheo skill workflows: `install`, `update`, `uninstall`, `validate`, `list`, and `show`.
