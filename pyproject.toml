@@ -31,11 +31,15 @@ description = "Standalone multi-agent skill manager for AgentSkills-compatible p
 name = "skill-mgr"
 readme = "README.md"
 requires-python = ">=3.12"
-url = "https://github.com/AI-Colleagues/skill-mgr"
 version = "0.1.0"
 
 [project.scripts]
 skill-mgr = "skill_mgr.main:main"
+
+[project.urls]
+Homepage = "https://github.com/AI-Colleagues/skill-mgr"
+Issues = "https://github.com/AI-Colleagues/skill-mgr/issues"
+Source = "https://github.com/AI-Colleagues/skill-mgr"
 
 [tool.coverage.report]
 exclude_lines = [
