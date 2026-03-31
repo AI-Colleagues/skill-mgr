@@ -14,6 +14,7 @@ dev = [
   "pytest-cov>=4.1.0",
   "ruff>=0.11.3",
   "smokeshow>=0.5.0",
+  "types-PyYAML",
   "types-requests"
 ]
 docs = [
@@ -25,13 +26,16 @@ docs = [
 ]
 
 [project]
-dependencies = []
-description = "Add your description here"
+dependencies = ["PyYAML>=6.0"]
+description = "Standalone multi-agent skill manager for AgentSkills-compatible packages"
 name = "skill-mgr"
 readme = "README.md"
 requires-python = ">=3.12"
 url = "https://github.com/AI-Colleagues/skill-mgr"
 version = "0.0.1"
+
+[project.scripts]
+skill-mgr = "skill_mgr.main:main"
 
 [tool.coverage.report]
 exclude_lines = [
