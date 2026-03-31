@@ -33,7 +33,19 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy .
-      - run: uv run pytest
+      - name: Run tests with coverage
+        if: matrix.os == 'ubuntu-latest'
+        run: uv run pytest --cov --cov-report term-missing --cov-report html:coverage-html tests/
+      - name: Upload coverage HTML
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: coverage-html
+          if-no-files-found: error
+      - name: Run tests
+        if: matrix.os != 'ubuntu-latest'
+        run: uv run pytest
 
   publish:
     if: github.ref_type == 'tag'

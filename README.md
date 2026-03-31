@@ -9,13 +9,25 @@
 ## Installation
 
 ```bash
-uv sync --all-groups
+uv tool install skill-mgr
 ```
 
-The CLI entrypoint is:
+Run the installed CLI directly:
+
+```bash
+skill-mgr -h
+```
+
+If you want to use the CLI without installing it first:
 
 ```bash
 uv run skill-mgr -h
+```
+
+If you are working from source:
+
+```bash
+uv sync --all-groups
 ```
 
 ## Commands
@@ -116,37 +128,37 @@ Skill instructions go here.
 Install from a local directory into every bundled target:
 
 ```bash
-uv run skill-mgr install ~/skills/demo-skill
+skill-mgr install ~/skills/demo-skill
 ```
 
 Install only for Codex and Claude:
 
 ```bash
-uv run skill-mgr install ~/skills/demo-skill -t codex -t claude
+skill-mgr install ~/skills/demo-skill -t codex -t claude
 ```
 
 Install from a GitHub repo root:
 
 ```bash
-uv run skill-mgr install owner/repo
+skill-mgr install owner/repo
 ```
 
 Install from a nested GitHub skill directory:
 
 ```bash
-uv run skill-mgr install owner/repo/skills/demo-skill
+skill-mgr install owner/repo/skills/demo-skill
 ```
 
 Validate without installing:
 
 ```bash
-uv run skill-mgr validate owner/repo/skills/demo-skill --format markdown
+skill-mgr validate owner/repo/skills/demo-skill --format markdown
 ```
 
 List skills across bundled adapters:
 
 ```bash
-uv run skill-mgr list
+skill-mgr list
 ```
 
 ## Development
@@ -157,4 +169,4 @@ make lint
 make test
 ```
 
-The CI workflow runs the same lint and test commands on Windows, Linux, and macOS.
+The CI workflow currently runs formatting, linting, type-checking, and `pytest` on Windows, Linux, and macOS.
