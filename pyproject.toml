@@ -26,7 +26,7 @@ docs = [
 ]
 
 [project]
-dependencies = ["PyYAML>=6.0"]
+dependencies = ["PyYAML>=6.0", "rich>=14.0.0", "typer>=0.16.0"]
 description = "Standalone multi-agent skill manager for AgentSkills-compatible packages"
 name = "skill-mgr"
 readme = "README.md"

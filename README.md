@@ -11,27 +11,30 @@ uv sync --all-groups
 The CLI entrypoint is:
 
 ```bash
-uv run skill-mgr --help
+uv run skill-mgr -h
 ```
 
 ## Commands
 
 ```text
-skill-mgr install REF [--target TARGET ...] [--human]
-skill-mgr update REF [--target TARGET ...] [--human]
-skill-mgr uninstall NAME [--target TARGET ...] [--human]
-skill-mgr validate REF [--human]
-skill-mgr list [--target TARGET ...] [--human]
-skill-mgr show NAME [--target TARGET ...] [--human]
-skill-mgr support-matrix [--human]
+skill-mgr install REF [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr update REF [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr uninstall NAME [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr validate REF [--format rich|markdown|json]
+skill-mgr list [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr show NAME [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr support-matrix [--format rich|markdown|json]
 ```
 
 Rules:
 
 - Repeated `--target/-t` values are allowed.
-- Omitting `--target` behaves like `--target all`.
+- Omitting `--target` installs to bundled agents detected in the current environment.
+- Explicit `--target` values bypass detection and are still honored even if the agent home directory does not exist yet.
 - `all` is mutually exclusive with explicit targets.
-- JSON output is the default. Pass `--human` for a table-oriented view.
+- Rich-rendered human output is the default.
+- Use `--format markdown` for plain-text Markdown tables that are easier for LLMs and other text consumers to parse.
+- Use `--format json` for strict structured output.
 
 ## Source Refs
 
@@ -57,14 +60,16 @@ The bundled adapters currently publish this matrix:
 | `claude` | supported | supported | supported | `~/.claude/skills` | Home-relative managed skill root used by the adapter |
 | `codex` | supported | supported | supported | `~/.codex/skills` | Matches the local Codex skill layout used by the app/CLI |
 | `openclaw` | supported | supported | supported | `~/.openclaw/skills` | Matches OpenClaw's documented managed/local skills directory |
+| `orcheo` | supported | supported | supported | `~/.orcheo/skills` | Matches Orcheo's managed local skills directory |
 
 Platform semantics:
 
 - `supported`: the adapter has a defined install root and is expected to work on that OS.
 - `unsupported`: the adapter is intentionally skipped on that OS.
 - `unknown`: the adapter root is not yet defined and the target is skipped with `unknown_install_root`.
+- `agent_not_detected`: the adapter is bundled, but its home directory was not found during default target selection.
 
-Current bundled adapters all map to explicit home-relative roots, so default `all` expands to `claude`, `codex`, and `openclaw` on Windows, Linux, and macOS.
+Current bundled adapters all map to explicit home-relative roots. Explicit `--target all` expands to `claude`, `codex`, `openclaw`, and `orcheo` on Windows, Linux, and macOS, while the default target set only includes agents detected on the current machine.
 
 ## `SKILL.md` Contract
 
@@ -113,7 +118,7 @@ uv run skill-mgr install ~/skills/demo-skill
 Install only for Codex and Claude:
 
 ```bash
-uv run skill-mgr install ~/skills/demo-skill -t codex -t claude --human
+uv run skill-mgr install ~/skills/demo-skill -t codex -t claude
 ```
 
 Install from a GitHub repo root:
@@ -131,13 +136,13 @@ uv run skill-mgr install owner/repo/skills/demo-skill
 Validate without installing:
 
 ```bash
-uv run skill-mgr validate owner/repo/skills/demo-skill --human
+uv run skill-mgr validate owner/repo/skills/demo-skill --format markdown
 ```
 
 List skills across bundled adapters:
 
 ```bash
-uv run skill-mgr list --human
+uv run skill-mgr list
 ```
 
 ## Development

@@ -19,6 +19,11 @@ def bundled_adapters(
                 "linux": "supported",
                 "macos": "supported",
             },
+            "detection_root_by_os": {
+                "windows": "{home}/.claude",
+                "linux": "{home}/.claude",
+                "macos": "{home}/.claude",
+            },
             "install_root_by_os": {
                 "windows": "{home}/.claude/skills",
                 "linux": "{home}/.claude/skills",
@@ -30,6 +35,11 @@ def bundled_adapters(
                 "windows": "supported",
                 "linux": "supported",
                 "macos": "supported",
+            },
+            "detection_root_by_os": {
+                "windows": "{home}/.codex",
+                "linux": "{home}/.codex",
+                "macos": "{home}/.codex",
             },
             "install_root_by_os": {
                 "windows": "{home}/.codex/skills",
@@ -43,26 +53,56 @@ def bundled_adapters(
                 "linux": "supported",
                 "macos": "supported",
             },
+            "detection_root_by_os": {
+                "windows": "{home}/.openclaw",
+                "linux": "{home}/.openclaw",
+                "macos": "{home}/.openclaw",
+            },
             "install_root_by_os": {
                 "windows": "{home}/.openclaw/skills",
                 "linux": "{home}/.openclaw/skills",
                 "macos": "{home}/.openclaw/skills",
             },
         },
+        "orcheo": {
+            "support_by_os": {
+                "windows": "supported",
+                "linux": "supported",
+                "macos": "supported",
+            },
+            "detection_root_by_os": {
+                "windows": "{home}/.orcheo",
+                "linux": "{home}/.orcheo",
+                "macos": "{home}/.orcheo",
+            },
+            "install_root_by_os": {
+                "windows": "{home}/.orcheo/skills",
+                "linux": "{home}/.orcheo/skills",
+                "macos": "{home}/.orcheo/skills",
+            },
+        },
     }
 
     return {
-        name: AgentAdapter(
-            name=name,
-            support_by_os=cast(dict[OSName, SupportState], definition["support_by_os"]),
-            install_root_by_os=cast(
-                dict[OSName, str | None], definition["install_root_by_os"]
-            ),
-            current_os=current_os,
-            install_root=Path(
-                definition["install_root_by_os"][current_os].format(home=home_dir)
-            ),
-        )
+            name: AgentAdapter(
+                name=name,
+                support_by_os=cast(
+                    dict[OSName, SupportState], definition["support_by_os"]
+                ),
+                detection_root_by_os=cast(
+                    dict[OSName, str | None], definition["detection_root_by_os"]
+                ),
+                install_root_by_os=cast(
+                    dict[OSName, str | None], definition["install_root_by_os"]
+                ),
+                current_os=current_os,
+                detection_root=Path(
+                    definition["detection_root_by_os"][current_os].format(home=home_dir)
+                ),
+                install_root=Path(
+                    definition["install_root_by_os"][current_os].format(home=home_dir)
+                ),
+            )
         for name, definition in definitions.items()
     }
 
@@ -102,6 +142,14 @@ def bundled_adapter_matrix() -> dict[str, Any]:
                 "notes": (
                     "Matches OpenClaw's documented managed/local skills directory."
                 ),
+            },
+            {
+                "adapter": "orcheo",
+                "windows": "supported",
+                "linux": "supported",
+                "macos": "supported",
+                "install_root": "~/.orcheo/skills",
+                "notes": "Matches Orcheo's managed local skills directory.",
             },
         ],
     }

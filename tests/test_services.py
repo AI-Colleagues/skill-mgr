@@ -24,6 +24,8 @@ def test_install_update_uninstall_local_flow(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
+    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+        (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
@@ -34,6 +36,7 @@ def test_install_update_uninstall_local_flow(
         "installed",
         "installed",
         "installed",
+        "installed",
     ]
 
     update_payload = service.update(str(source))
@@ -41,10 +44,12 @@ def test_install_update_uninstall_local_flow(
         "updated",
         "updated",
         "updated",
+        "updated",
     ]
 
     show_payload = service.show("demo-skill")
     assert [target["status"] for target in show_payload["targets"]] == [
+        "installed",
         "installed",
         "installed",
         "installed",
@@ -58,6 +63,7 @@ def test_install_update_uninstall_local_flow(
         "uninstalled",
         "uninstalled",
         "uninstalled",
+        "uninstalled",
     ]
 
 
@@ -66,6 +72,8 @@ def test_install_from_github_repo_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
+    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+        (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
@@ -108,6 +116,8 @@ def test_install_from_github_nested_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
+    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+        (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
@@ -151,6 +161,8 @@ def test_validate_reports_invalid_nested_subpath(
     os_name: str,
 ) -> None:
     home = tmp_path / "home"
+    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+        (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
@@ -182,3 +194,42 @@ def test_validate_reports_invalid_nested_subpath(
     with patch("urllib.request.urlopen", side_effect=fake_urlopen):
         with pytest.raises(Exception, match="does not exist"):
             service.validate("owner/repo/skills/demo-skill")
+
+
+@pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
+def test_install_default_skips_undetected_agents(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
+) -> None:
+    home = tmp_path / "home"
+    for marker in (".claude", ".codex"):
+        (home / marker).mkdir(parents=True)
+    monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
+    monkeypatch.setattr("pathlib.Path.home", lambda: home)
+    service = SkillManagerService()
+    source = write_skill(tmp_path / "source" / "demo-skill")
+
+    payload = service.install(str(source))
+
+    assert [target["status"] for target in payload["targets"]] == [
+        "installed",
+        "installed",
+        "skipped_unavailable",
+        "skipped_unavailable",
+    ]
+    assert payload["targets"][2]["message"] == "agent_not_detected"
+    assert payload["targets"][3]["message"] == "agent_not_detected"
+
+
+@pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
+def test_install_explicit_target_bypasses_detection(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
+    monkeypatch.setattr("pathlib.Path.home", lambda: home)
+    service = SkillManagerService()
+    source = write_skill(tmp_path / "source" / "demo-skill")
+
+    payload = service.install(str(source), targets=["openclaw"])
+
+    assert [target["status"] for target in payload["targets"]] == ["installed"]

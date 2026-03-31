@@ -1,92 +1,200 @@
 """Command-line interface."""
 
 from __future__ import annotations
-import argparse
-from typing import Any
+
+import sys
+from collections.abc import Callable
+from enum import StrEnum
+from typing import Annotated, Any
+
+import typer
+from typer.testing import CliRunner
+
 from skill_mgr.adapters import bundled_adapter_matrix
 from skill_mgr.errors import SkillMgrError
-from skill_mgr.render import render_human, render_json
+from skill_mgr.render import render_json, render_markdown, render_rich
 from skill_mgr.services import SkillManagerService
 
 
-def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="skill-mgr")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+HELP_CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
-    for command in ("install", "update"):
-        subparser = subparsers.add_parser(command)
-        subparser.add_argument("ref")
-        subparser.add_argument("--target", "-t", action="append", default=[])
-        subparser.add_argument("--human", action="store_true")
-
-    uninstall = subparsers.add_parser("uninstall")
-    uninstall.add_argument("name")
-    uninstall.add_argument("--target", "-t", action="append", default=[])
-    uninstall.add_argument("--human", action="store_true")
-
-    validate = subparsers.add_parser("validate")
-    validate.add_argument("ref")
-    validate.add_argument("--human", action="store_true")
-
-    list_parser = subparsers.add_parser("list")
-    list_parser.add_argument("--target", "-t", action="append", default=[])
-    list_parser.add_argument("--human", action="store_true")
-
-    show = subparsers.add_parser("show")
-    show.add_argument("name")
-    show.add_argument("--target", "-t", action="append", default=[])
-    show.add_argument("--human", action="store_true")
-
-    matrix = subparsers.add_parser("support-matrix")
-    matrix.add_argument("--human", action="store_true")
-
-    return parser
+app = typer.Typer(
+    help="Install, inspect, and manage agent skills.",
+    context_settings=HELP_CONTEXT_SETTINGS,
+)
 
 
-def _emit(payload: dict[str, Any], *, human: bool) -> None:
-    if human:
-        print(render_human(payload))
+class OutputFormat(StrEnum):
+    """Supported CLI output formats."""
+
+    RICH = "rich"
+    MARKDOWN = "markdown"
+    JSON = "json"
+
+
+FormatOption = Annotated[
+    OutputFormat,
+    typer.Option(
+        "--format",
+        help=(
+            "Output format. `rich` is the default human-friendly mode, "
+            "`markdown` is plain-text and LLM-friendly, and `json` is structured."
+        ),
+        case_sensitive=False,
+    ),
+]
+TargetOption = Annotated[
+    list[str] | None,
+    typer.Option(
+        "--target",
+        "-t",
+        help="Target agent. Repeat for multiple targets or use `all`.",
+    ),
+]
+
+
+def _emit(payload: dict[str, Any], *, output_format: OutputFormat) -> None:
+    if output_format == OutputFormat.JSON:
+        typer.echo(render_json(payload))
         return
-    print(render_json(payload))
+    if output_format == OutputFormat.MARKDOWN:
+        typer.echo(render_markdown(payload))
+        return
+    typer.echo(render_rich(payload), nl=False)
 
 
-def _dispatch(service: SkillManagerService, args: argparse.Namespace) -> dict[str, Any]:
-    if args.command == "install":
-        payload = service.install(args.ref, targets=args.target)
-    elif args.command == "update":
-        payload = service.update(args.ref, targets=args.target)
-    elif args.command == "uninstall":
-        payload = service.uninstall(args.name, targets=args.target)
-    elif args.command == "validate":
-        payload = service.validate(args.ref)
-    elif args.command == "list":
-        payload = service.list(targets=args.target)
-    elif args.command == "show":
-        payload = service.show(args.name, targets=args.target)
-    elif args.command == "support-matrix":
-        payload = bundled_adapter_matrix()
-    else:
-        raise AssertionError(f"Unhandled command {args.command}")
-    return payload
-
-
-def _exit_status(args: argparse.Namespace, payload: dict[str, Any]) -> int:
-    if args.command == "validate":
+def _exit_status(command: str, payload: dict[str, Any]) -> int:
+    if command == "validate":
         return 0 if payload["valid"] else 1
     if any(target.get("status") == "error" for target in payload.get("targets", [])):
         return 1
     return 0
 
 
+def _run_command(
+    command: str,
+    *,
+    output_format: OutputFormat,
+    operation: Callable[[], dict[str, Any]],
+) -> None:
+    try:
+        payload = operation()
+    except SkillMgrError as exc:
+        _emit(
+            {"error": {"code": exc.code, "message": str(exc)}},
+            output_format=output_format,
+        )
+        raise typer.Exit(code=1) from exc
+
+    _emit(payload, output_format=output_format)
+    exit_code = _exit_status(command, payload)
+    if exit_code:
+        raise typer.Exit(code=exit_code)
+
+
+@app.command("install", context_settings=HELP_CONTEXT_SETTINGS)
+def install(
+    ref: str,
+    target: TargetOption = None,
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """Install a skill across one or more targets."""
+    service = SkillManagerService()
+    _run_command(
+        "install",
+        output_format=output_format,
+        operation=lambda: service.install(ref, targets=target),
+    )
+
+
+@app.command("update", context_settings=HELP_CONTEXT_SETTINGS)
+def update(
+    ref: str,
+    target: TargetOption = None,
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """Update a skill across one or more targets."""
+    service = SkillManagerService()
+    _run_command(
+        "update",
+        output_format=output_format,
+        operation=lambda: service.update(ref, targets=target),
+    )
+
+
+@app.command("uninstall", context_settings=HELP_CONTEXT_SETTINGS)
+def uninstall(
+    name: str,
+    target: TargetOption = None,
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """Uninstall a skill across one or more targets."""
+    service = SkillManagerService()
+    _run_command(
+        "uninstall",
+        output_format=output_format,
+        operation=lambda: service.uninstall(name, targets=target),
+    )
+
+
+@app.command("validate", context_settings=HELP_CONTEXT_SETTINGS)
+def validate(
+    ref: str,
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """Validate a skill source without installing it."""
+    service = SkillManagerService()
+    _run_command(
+        "validate",
+        output_format=output_format,
+        operation=lambda: service.validate(ref),
+    )
+
+
+@app.command("list", context_settings=HELP_CONTEXT_SETTINGS)
+def list_skills(
+    target: TargetOption = None,
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """List installed skills across one or more targets."""
+    service = SkillManagerService()
+    _run_command(
+        "list",
+        output_format=output_format,
+        operation=lambda: service.list(targets=target),
+    )
+
+
+@app.command("show", context_settings=HELP_CONTEXT_SETTINGS)
+def show(
+    name: str,
+    target: TargetOption = None,
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """Show one installed skill across one or more targets."""
+    service = SkillManagerService()
+    _run_command(
+        "show",
+        output_format=output_format,
+        operation=lambda: service.show(name, targets=target),
+    )
+
+
+@app.command("support-matrix", context_settings=HELP_CONTEXT_SETTINGS)
+def support_matrix(
+    output_format: FormatOption = OutputFormat.RICH,
+) -> None:
+    """Show the bundled adapter support matrix."""
+    _run_command(
+        "support-matrix",
+        output_format=output_format,
+        operation=bundled_adapter_matrix,
+    )
+
+
 def run(argv: list[str] | None = None) -> int:
     """Run the CLI and return an exit status."""
-    args = _parser().parse_args(argv)
-    service = SkillManagerService()
-    try:
-        payload = _dispatch(service, args)
-        _emit(payload, human=args.human)
-        return _exit_status(args, payload)
-    except SkillMgrError as exc:
-        payload = {"error": {"code": exc.code, "message": str(exc)}}
-        _emit(payload, human=getattr(args, "human", False))
-        return 1
+    runner = CliRunner()
+    result = runner.invoke(app, argv or [], prog_name="skill-mgr")
+    sys.stdout.write(result.output)
+    return result.exit_code

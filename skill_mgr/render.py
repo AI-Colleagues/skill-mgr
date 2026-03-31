@@ -1,8 +1,12 @@
-"""Human-readable output helpers."""
+"""CLI output helpers."""
 
 from __future__ import annotations
 import json
+from io import StringIO
 from typing import Any
+from rich.console import Console
+from rich.pretty import Pretty
+from rich.table import Table
 
 
 def render_json(payload: Any) -> str:
@@ -18,32 +22,35 @@ def _stringify(value: object) -> str:
     return str(value)
 
 
-def render_table(headers: list[str], rows: list[list[object]]) -> str:
-    """Render a simple left-aligned table."""
-    widths = [len(header) for header in headers]
-    normalized_rows: list[list[str]] = []
+def render_markdown_table(headers: list[str], rows: list[list[object]]) -> str:
+    """Render a Markdown table."""
+    header = "| " + " | ".join(headers) + " |"
+    separator = "| " + " | ".join("---" for _ in headers) + " |"
+    lines = [header, separator]
     for row in rows:
-        normalized = [_stringify(cell) for cell in row]
-        normalized_rows.append(normalized)
-        for index, value in enumerate(normalized):
-            widths[index] = max(widths[index], len(value))
-
-    lines: list[str] = [
-        "  ".join(header.ljust(widths[index]) for index, header in enumerate(headers)),
-        "  ".join("-" * width for width in widths),
-    ]
-    for normalized_row in normalized_rows:
-        lines.append(
-            "  ".join(
-                value.ljust(widths[index])
-                for index, value in enumerate(normalized_row)
-            )
-        )
+        cells = [_stringify(cell).replace("|", "\\|") for cell in row]
+        lines.append("| " + " | ".join(cells) + " |")
     return "\n".join(lines)
 
 
-def _render_action_payload(payload: dict[str, Any]) -> str:
+def _render_rich_table(
+    console: Console,
+    *,
+    title: str | None,
+    headers: list[str],
+    rows: list[list[object]],
+) -> None:
+    table = Table(title=title, show_lines=False)
+    for header in headers:
+        table.add_column(header, overflow="fold")
+    for row in rows:
+        table.add_row(*[_stringify(cell) for cell in row])
+    console.print(table)
+
+
+def _render_rich_action(console: Console, payload: dict[str, Any]) -> None:
     heading = f"{payload['action']} {payload.get('skill', '')}".strip()
+    console.print(f"[bold]{heading}[/bold]")
     rows = [
         [
             target.get("target", ""),
@@ -53,60 +60,95 @@ def _render_action_payload(payload: dict[str, Any]) -> str:
         ]
         for target in payload.get("targets", [])
     ]
-    table = render_table(["Target", "Status", "Path", "Message"], rows)
-    return f"{heading}\n\n{table}"
+    _render_rich_table(
+        console,
+        title="Targets",
+        headers=["Target", "Status", "Path", "Message"],
+        rows=rows,
+    )
 
 
-def _render_validate_payload(payload: dict[str, Any]) -> str:
-    lines = [f"valid: {payload['valid']}", f"source: {payload['source']['kind']}"]
+def _render_rich_validate(console: Console, payload: dict[str, Any]) -> None:
+    rows = [
+        ["Valid", payload["valid"]],
+        ["Source", payload["source"]["kind"]],
+    ]
     skill = payload.get("skill")
     if skill is not None:
-        lines.extend([f"name: {skill['name']}", f"description: {skill['description']}"])
+        rows.extend(
+            [
+                ["Name", skill["name"]],
+                ["Description", skill["description"]],
+            ]
+        )
+    _render_rich_table(
+        console,
+        title="Validation",
+        headers=["Field", "Value"],
+        rows=rows,
+    )
     errors = payload.get("errors", [])
     if errors:
-        rows = [[error["field"], error["code"], error["message"]] for error in errors]
-        lines.extend(["", render_table(["Field", "Code", "Message"], rows)])
-    return "\n".join(lines)
+        error_rows = [
+            [error["field"], error["code"], error["message"]] for error in errors
+        ]
+        _render_rich_table(
+            console,
+            title="Errors",
+            headers=["Field", "Code", "Message"],
+            rows=error_rows,
+        )
 
 
-def _render_list_payload(payload: dict[str, Any]) -> str:
-    blocks: list[str] = []
-    for target in payload.get("targets", []):
-        header = f"{target['target']} ({target['status']})"
+def _render_rich_list(console: Console, payload: dict[str, Any]) -> None:
+    def section_title(target: dict[str, Any]) -> str:
+        skill_count = len(target.get("skills", []))
+        skill_label = "1 skill" if skill_count == 1 else f"{skill_count} skills"
         if target["status"] == "skipped_unavailable":
-            blocks.append(f"{header}\n{target.get('message', '')}")
+            return f"{target['target']} ({target['status']})"
+        return f"{target['target']} ({target['status']}, {skill_label})"
+
+    console.print("[bold]Installed Skills[/bold]")
+    for index, target in enumerate(payload.get("targets", [])):
+        if index > 0:
+            console.print()
+        if target["status"] == "skipped_unavailable":
+            console.print(f"[bold]{section_title(target)}[/bold]")
+            console.print(target.get("message", ""))
             continue
         rows = [
             [skill.get("name", ""), skill.get("description", ""), skill.get("path", "")]
             for skill in target.get("skills", [])
         ]
-        body = (
-            render_table(["Name", "Description", "Path"], rows)
-            if rows
-            else "No installed skills."
-        )
-        blocks.append(f"{header}\n{body}")
-    return "\n\n".join(blocks)
+        if rows:
+            _render_rich_table(
+                console,
+                title=section_title(target),
+                headers=["Name", "Description", "Path"],
+                rows=rows,
+            )
+        else:
+            console.print(f"[bold]{section_title(target)}[/bold]")
+            console.print("No installed skills.")
 
 
-def _render_show_payload(payload: dict[str, Any]) -> str:
-    blocks = []
+def _render_rich_show(console: Console, payload: dict[str, Any]) -> None:
+    console.print(f"[bold]Skill: {payload['name']}[/bold]")
     for target in payload.get("targets", []):
-        header = f"{target['target']} ({target['status']})"
+        console.print(f"[bold]{target['target']}[/bold] ({target['status']})")
         if target["status"] != "installed":
-            blocks.append(f"{header}\n{target.get('message', '')}")
+            console.print(target.get("message", ""))
             continue
         metadata = target.get("metadata") or {}
-        lines = [
-            f"name: {metadata.get('name', '')}",
-            f"description: {metadata.get('description', '')}",
-            f"path: {target.get('path', '')}",
+        rows = [
+            ["Name", metadata.get("name", "")],
+            ["Description", metadata.get("description", "")],
+            ["Path", target.get("path", "")],
         ]
-        blocks.append(f"{header}\n" + "\n".join(lines))
-    return "\n\n".join(blocks)
+        _render_rich_table(console, title=None, headers=["Field", "Value"], rows=rows)
 
 
-def _render_support_matrix(payload: dict[str, Any]) -> str:
+def _render_rich_support_matrix(console: Console, payload: dict[str, Any]) -> None:
     rows = [
         [
             row["adapter"],
@@ -118,27 +160,164 @@ def _render_support_matrix(payload: dict[str, Any]) -> str:
         ]
         for row in payload.get("targets", [])
     ]
-    return render_table(
-        ["Adapter", "Windows", "Linux", "macOS", "Install Root", "Notes"],
-        rows,
+    _render_rich_table(
+        console,
+        title="Support Matrix",
+        headers=["Adapter", "Windows", "Linux", "macOS", "Install Root", "Notes"],
+        rows=rows,
     )
 
 
-def render_human(payload: dict[str, Any]) -> str:
-    """Render a command payload in human form."""
+def render_rich(payload: dict[str, Any]) -> str:
+    """Render a payload using Rich tables and pretty output."""
+    console = Console(
+        record=True,
+        force_terminal=False,
+        width=120,
+        file=StringIO(),
+    )
     if "error" in payload:
         error = payload["error"]
-        result = f"Error [{error['code']}]: {error['message']}"
+        console.print(
+            f"[bold red]Error [{error['code']}] [/bold red]{error['message']}"
+        )
     elif payload.get("action") in {"install", "update", "uninstall"}:
-        result = _render_action_payload(payload)
+        _render_rich_action(console, payload)
     elif payload.get("valid") is not None:
-        result = _render_validate_payload(payload)
+        _render_rich_validate(console, payload)
     elif payload.get("action") == "list":
-        result = _render_list_payload(payload)
+        _render_rich_list(console, payload)
     elif payload.get("action") == "show":
-        result = _render_show_payload(payload)
+        _render_rich_show(console, payload)
     elif payload.get("action") == "support-matrix":
-        result = _render_support_matrix(payload)
+        _render_rich_support_matrix(console, payload)
     else:
-        result = render_json(payload)
+        console.print(Pretty(payload, indent_guides=True))
+    return console.export_text()
+
+
+def _render_markdown_action(payload: dict[str, Any]) -> str:
+    heading = f"## {payload['action']} {payload.get('skill', '')}".strip()
+    rows = [
+        [
+            target.get("target", ""),
+            target.get("status", ""),
+            target.get("path", ""),
+            target.get("message", ""),
+        ]
+        for target in payload.get("targets", [])
+    ]
+    table = render_markdown_table(["Target", "Status", "Path", "Message"], rows)
+    return f"{heading}\n\n{table}"
+
+
+def _render_markdown_validate(payload: dict[str, Any]) -> str:
+    lines = [
+        "## Validation",
+        f"- valid: {payload['valid']}",
+        f"- source: {payload['source']['kind']}",
+    ]
+    skill = payload.get("skill")
+    if skill is not None:
+        lines.extend(
+            [
+                f"- name: {skill['name']}",
+                f"- description: {skill['description']}",
+            ]
+        )
+    errors = payload.get("errors", [])
+    if errors:
+        rows = [[error["field"], error["code"], error["message"]] for error in errors]
+        lines.extend(
+            [
+                "",
+                "### Errors",
+                "",
+                render_markdown_table(["Field", "Code", "Message"], rows),
+            ]
+        )
+    return "\n".join(lines)
+
+
+def _render_markdown_list(payload: dict[str, Any]) -> str:
+    blocks = ["## Installed Skills"]
+    for target in payload.get("targets", []):
+        skill_count = len(target.get("skills", []))
+        skill_label = "1 skill" if skill_count == 1 else f"{skill_count} skills"
+        if target["status"] == "skipped_unavailable":
+            blocks.append(f"\n### {target['target']} ({target['status']})")
+        else:
+            blocks.append(
+                f"\n### {target['target']} ({target['status']}, {skill_label})"
+            )
+        if target["status"] == "skipped_unavailable":
+            blocks.append(target.get("message", ""))
+            continue
+        rows = [
+            [skill.get("name", ""), skill.get("description", ""), skill.get("path", "")]
+            for skill in target.get("skills", [])
+        ]
+        if rows:
+            blocks.append(render_markdown_table(["Name", "Description", "Path"], rows))
+        else:
+            blocks.append("No installed skills.")
+    return "\n".join(blocks)
+
+
+def _render_markdown_show(payload: dict[str, Any]) -> str:
+    blocks = [f"## Skill: {payload['name']}"]
+    for target in payload.get("targets", []):
+        blocks.append(f"\n### {target['target']} ({target['status']})")
+        if target["status"] != "installed":
+            blocks.append(target.get("message", ""))
+            continue
+        metadata = target.get("metadata") or {}
+        rows = [
+            ["Name", metadata.get("name", "")],
+            ["Description", metadata.get("description", "")],
+            ["Path", target.get("path", "")],
+        ]
+        blocks.append(render_markdown_table(["Field", "Value"], rows))
+    return "\n".join(blocks)
+
+
+def _render_markdown_support_matrix(payload: dict[str, Any]) -> str:
+    rows = [
+        [
+            row["adapter"],
+            row["windows"],
+            row["linux"],
+            row["macos"],
+            row["install_root"],
+            row["notes"],
+        ]
+        for row in payload.get("targets", [])
+    ]
+    table = render_markdown_table(
+        ["Adapter", "Windows", "Linux", "macOS", "Install Root", "Notes"],
+        rows,
+    )
+    return f"## Support Matrix\n\n{table}"
+
+
+def render_markdown(payload: dict[str, Any]) -> str:
+    """Render a command payload as Markdown."""
+    result: str
+    if "error" in payload:
+        error = payload["error"]
+        result = "\n".join(
+            ["## Error", f"- code: {error['code']}", f"- message: {error['message']}"]
+        )
+    elif payload.get("action") in {"install", "update", "uninstall"}:
+        result = _render_markdown_action(payload)
+    elif payload.get("valid") is not None:
+        result = _render_markdown_validate(payload)
+    elif payload.get("action") == "list":
+        result = _render_markdown_list(payload)
+    elif payload.get("action") == "show":
+        result = _render_markdown_show(payload)
+    elif payload.get("action") == "support-matrix":
+        result = _render_markdown_support_matrix(payload)
+    else:
+        result = f"```json\n{render_json(payload)}\n```"
     return result

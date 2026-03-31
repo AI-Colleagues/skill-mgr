@@ -13,7 +13,7 @@
 
 `skill-mgr` is a standalone Python package and CLI that installs a valid agent skill into one or more supported AI coding agents. The design combines two Orcheo ideas: a generic skill lifecycle surface and a multi-target installer that copies one validated skill directory into several agent-specific locations. The system must stay source-agnostic after resolution, so local directories and GitHub shorthand refs flow through the same validation and install pipeline.
 
-The key design choice is an adapter registry. Core logic should know how to parse refs, validate skills, and orchestrate installs, but it should not hard-code per-agent filesystem rules beyond asking adapters for their destination roots and availability checks. This keeps the initial release focused on `claude`, `codex`, and `openclaw` while making future adapters incremental rather than invasive.
+The key design choice is an adapter registry. Core logic should know how to parse refs, validate skills, and orchestrate installs, but it should not hard-code per-agent filesystem rules beyond asking adapters for their destination roots and availability checks. This keeps the initial release focused on `claude`, `codex`, `openclaw`, and `orcheo` while making future adapters incremental rather than invasive.
 
 Windows, Linux, and macOS are all first-class platforms in this design. That does not mean every bundled adapter is guaranteed to support every OS on day one, but it does mean the product must model support explicitly, surface unsupported combinations clearly, and test the shared install engine across all three.
 
@@ -34,7 +34,7 @@ Windows, Linux, and macOS are all first-class platforms in this design. That doe
   - Produces normalized metadata used by install and show operations.
 
 - **Adapter registry (`skill_mgr.adapters`)**
-  - Registers supported agent adapters keyed by stable names such as `claude`, `codex`, and `openclaw`.
+  - Registers supported agent adapters keyed by stable names such as `claude`, `codex`, `openclaw`, and `orcheo`.
   - Resolves `all`, deduplicates repeated targets, and filters unavailable adapters.
   - Stores per-OS install root rules and support metadata for Windows, Linux, and macOS.
 
@@ -51,10 +51,10 @@ Windows, Linux, and macOS are all first-class platforms in this design. That doe
 ### Flow 1: Install from local directory to all supported agents
 
 1. User runs `skill-mgr install /path/to/skill`.
-2. CLI resolves targets as `all` because none were passed.
+2. CLI resolves targets to the agents detected in the current environment because none were passed.
 3. Source resolver confirms the input is a directory and returns it unchanged.
 4. Validator parses `SKILL.md` and extracts metadata, including the canonical skill name.
-5. Adapter registry expands `all` into every bundled adapter and checks availability.
+5. Adapter registry checks every bundled adapter and marks undetected agents as `skipped_unavailable` with reason `agent_not_detected`.
 6. Install engine copies the validated skill directory into each adapter destination root.
 7. CLI prints per-target results with statuses such as `installed`, `skipped_unavailable`, or `error`.
 8. If a bundled adapter is unsupported on the current OS, the result must include an explicit machine-readable reason.
@@ -105,12 +105,12 @@ This yields a final result per target such as `installed`, `updated`, `skipped_u
 ### CLI Commands
 
 ```text
-skill-mgr install REF [--target TARGET ...] [--human]
-skill-mgr update REF [--target TARGET ...] [--human]
-skill-mgr uninstall NAME [--target TARGET ...] [--human]
-skill-mgr validate REF [--human]
-skill-mgr list [--target TARGET ...] [--human]
-skill-mgr show NAME [--target TARGET ...] [--human]
+skill-mgr install REF [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr update REF [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr uninstall NAME [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr validate REF [--format rich|markdown|json]
+skill-mgr list [--target TARGET ...] [--format rich|markdown|json]
+skill-mgr show NAME [--target TARGET ...] [--format rich|markdown|json]
 ```
 
 ### Target result statuses
@@ -142,6 +142,8 @@ Rules:
 - `owner/repo` means the skill lives at the repository root.
 - `owner/repo/dir` or `owner/repo/path/to/dir` means the skill lives under that nested directory.
 - After home expansion and path normalization, an existing local path takes precedence over GitHub shorthand parsing.
+- Omitting `--target` means "use detected bundled agents in the current environment".
+- Explicit `all` expands to every bundled adapter, even if some are not detected in the current environment.
 - `all` is mutually exclusive with explicit non-`all` targets; mixed usage must be rejected before service execution.
 
 ### Service contract: install/update result

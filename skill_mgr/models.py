@@ -87,8 +87,10 @@ class AgentAdapter:
     name: str
     support_by_os: dict[OSName, SupportState]
     install_root_by_os: dict[OSName, str | None]
+    detection_root_by_os: dict[OSName, str | None]
     current_os: OSName
     install_root: Path | None = None
+    detection_root: Path | None = None
     available: bool = False
     availability_reason: str | None = None
 
@@ -98,10 +100,14 @@ class AgentAdapter:
             "name": self.name,
             "support_by_os": self.support_by_os,
             "install_root_by_os": self.install_root_by_os,
+            "detection_root_by_os": self.detection_root_by_os,
             "current_os": self.current_os,
             "install_root": None
             if self.install_root is None
             else str(self.install_root),
+            "detection_root": None
+            if self.detection_root is None
+            else str(self.detection_root),
             "available": self.available,
             "availability_reason": self.availability_reason,
         }

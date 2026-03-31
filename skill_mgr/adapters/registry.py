@@ -30,11 +30,10 @@ def resolve_targets(
     normalized_os = current_os or current_os_name()
     registry = bundled_adapters(current_os=normalized_os, home=home)
 
-    requested = [
-        target.strip().lower() for target in (targets or ["all"]) if target.strip()
-    ]
+    requested = [target.strip().lower() for target in (targets or []) if target.strip()]
     if not requested:
         requested = ["all"]
+    implicit_selection = targets is None
 
     if "all" in requested and len(set(requested)) > 1:
         raise SkillMgrError(
@@ -62,6 +61,13 @@ def resolve_targets(
         elif adapter.install_root is None:
             adapter.available = False
             adapter.availability_reason = "unknown_install_root"
+        elif (
+            implicit_selection
+            and adapter.detection_root is not None
+            and not adapter.detection_root.exists()
+        ):
+            adapter.available = False
+            adapter.availability_reason = "agent_not_detected"
         else:
             adapter.available = True
         resolved.append(adapter)
