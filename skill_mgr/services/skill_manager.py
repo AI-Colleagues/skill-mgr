@@ -1,7 +1,6 @@
 """Core skill-manager services."""
 
 from __future__ import annotations
-import builtins
 import shutil
 from pathlib import Path
 from typing import Any
@@ -42,6 +41,7 @@ class SkillManagerService:
         try:
             skill, errors = validate_skill_directory(materialized.directory)
             return {
+                "action": "validate",
                 "ref": ref,
                 "source": materialized.source.to_dict(),
                 "valid": skill is not None and not errors,
@@ -114,7 +114,7 @@ class SkillManagerService:
         return {"action": "list", "targets": results}
 
     def show(
-        self, name: str, *, targets: builtins.list[str] | None = None
+        self, name: str, *, targets: list[str] | None = None
     ) -> dict[str, Any]:
         """Show one skill across one or more targets."""
         resolved_targets = resolve_targets(targets)
@@ -158,7 +158,7 @@ class SkillManagerService:
         action: str,
         *,
         ref: str,
-        targets: builtins.list[str] | None,
+        targets: list[str] | None,
     ) -> dict[str, Any]:
         materialized = materialize_source(ref)
         try:
@@ -212,7 +212,7 @@ class SkillManagerService:
         finally:
             self._cleanup(materialized)
 
-    def _list_target_skills(self, root: Path) -> builtins.list[dict[str, Any]]:
+    def _list_target_skills(self, root: Path) -> list[dict[str, Any]]:
         if not root.is_dir():
             return []
         rows: list[dict[str, Any]] = []

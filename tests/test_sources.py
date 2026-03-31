@@ -1,13 +1,12 @@
 from __future__ import annotations
 import io
 import json
-import tarfile
 from pathlib import Path
 from unittest.mock import patch
 import pytest
 from skill_mgr.errors import SkillMgrError
 from skill_mgr.sources import materialize_source, parse_github_shorthand
-from tests.helpers import write_skill
+from tests.helpers import github_archive_bytes, write_skill
 
 
 class MockResponse(io.BytesIO):
@@ -16,16 +15,6 @@ class MockResponse(io.BytesIO):
 
     def __exit__(self, *_args: object) -> None:
         self.close()
-
-
-def _github_archive_bytes(files: list[tuple[str, bytes]]) -> bytes:
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-        for relative_path, content in files:
-            info = tarfile.TarInfo(relative_path)
-            info.size = len(content)
-            archive.addfile(info, io.BytesIO(content))
-    return buffer.getvalue()
 
 
 def test_parse_github_shorthand_repo_root() -> None:
@@ -49,7 +38,7 @@ def test_materialize_source_prefers_existing_local_path(tmp_path: Path) -> None:
 
 
 def test_materialize_source_downloads_repo_root(tmp_path: Path) -> None:
-    archive = _github_archive_bytes(
+    archive = github_archive_bytes(
         [
             (
                 "owner-repo-main/SKILL.md",
@@ -77,7 +66,7 @@ def test_materialize_source_downloads_repo_root(tmp_path: Path) -> None:
 
 
 def test_materialize_source_uses_json_accept_for_tarball() -> None:
-    archive = _github_archive_bytes(
+    archive = github_archive_bytes(
         [
             (
                 "owner-repo-main/SKILL.md",
@@ -102,7 +91,7 @@ def test_materialize_source_uses_json_accept_for_tarball() -> None:
 
 
 def test_materialize_source_rejects_invalid_subpath() -> None:
-    archive = _github_archive_bytes(
+    archive = github_archive_bytes(
         [
             (
                 "owner-repo-main/SKILL.md",
@@ -123,7 +112,7 @@ def test_materialize_source_rejects_invalid_subpath() -> None:
 
 
 def test_materialize_source_rejects_path_traversal_archive() -> None:
-    archive = _github_archive_bytes(
+    archive = github_archive_bytes(
         [("../escape.txt", b"bad"), ("owner-repo-main/SKILL.md", b"ignored")]
     )
 
@@ -136,3 +125,73 @@ def test_materialize_source_rejects_path_traversal_archive() -> None:
     with patch("urllib.request.urlopen", side_effect=fake_urlopen):
         with pytest.raises(SkillMgrError, match="invalid path"):
             materialize_source("owner/repo")
+
+
+def test_materialize_source_uses_configured_api_base(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = github_archive_bytes(
+        [
+            (
+                "owner-repo-main/SKILL.md",
+                b"---\nname: demo-skill\ndescription: Demo skill\n---\n\nBody\n",
+            )
+        ]
+    )
+    monkeypatch.setattr(
+        "skill_mgr.sources.github.GITHUB_API_BASE", "https://example.test/api"
+    )
+    seen_urls: list[str] = []
+
+    def fake_urlopen(request: object, timeout: int = 60) -> MockResponse:
+        url = request.full_url  # type: ignore[attr-defined]
+        seen_urls.append(url)
+        if url.endswith("/repos/owner/repo"):
+            return MockResponse(json.dumps({"default_branch": "main"}).encode("utf-8"))
+        return MockResponse(archive)
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        materialized = materialize_source("owner/repo")
+
+    try:
+        assert seen_urls == [
+            "https://example.test/api/repos/owner/repo",
+            "https://example.test/api/repos/owner/repo/tarball/main",
+        ]
+        assert materialized.cleanup_root is not None
+    finally:
+        if materialized.cleanup_root is not None:
+            assert materialized.cleanup_root.exists()
+
+
+def test_materialize_source_uses_github_token_when_present(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    archive = github_archive_bytes(
+        [
+            (
+                "owner-repo-main/SKILL.md",
+                b"---\nname: demo-skill\ndescription: Demo skill\n---\n\nBody\n",
+            )
+        ]
+    )
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    auth_headers: list[str | None] = []
+
+    def fake_urlopen(request: object, timeout: int = 60) -> MockResponse:
+        url = request.full_url  # type: ignore[attr-defined]
+        headers = request.headers  # type: ignore[attr-defined]
+        auth_headers.append(headers.get("Authorization"))
+        if url.endswith("/repos/owner/repo"):
+            return MockResponse(json.dumps({"default_branch": "main"}).encode("utf-8"))
+        return MockResponse(archive)
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        materialized = materialize_source("owner/repo")
+
+    try:
+        assert auth_headers == ["Bearer test-token", "Bearer test-token"]
+        assert materialized.cleanup_root is not None
+    finally:
+        if materialized.cleanup_root is not None:
+            assert materialized.cleanup_root.exists()

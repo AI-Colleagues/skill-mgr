@@ -1,6 +1,9 @@
 from __future__ import annotations
+import io
 import tarfile
 from pathlib import Path
+from typer.testing import CliRunner
+from skill_mgr.cli import app
 
 
 def write_skill(
@@ -34,3 +37,19 @@ def make_tarball(archive_path: Path, files: list[tuple[str, bytes]]) -> None:
             temp_file.parent.mkdir(parents=True, exist_ok=True)
             temp_file.write_bytes(content)
             archive.add(temp_file, arcname=relative_path)
+
+
+def github_archive_bytes(files: list[tuple[str, bytes]]) -> bytes:
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+        for relative_path, content in files:
+            info = tarfile.TarInfo(relative_path)
+            info.size = len(content)
+            archive.addfile(info, io.BytesIO(content))
+    return buffer.getvalue()
+
+
+def run(argv: list[str] | None = None) -> int:
+    result = CliRunner().invoke(app, argv or [], prog_name="skill-mgr")
+    print(result.output, end="")
+    return result.exit_code

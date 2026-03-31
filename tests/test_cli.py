@@ -1,12 +1,9 @@
 from __future__ import annotations
-
 from pathlib import Path
-
 import pytest
 from typer.testing import CliRunner
-
-from skill_mgr.cli import app, run
-from tests.helpers import write_skill
+from skill_mgr.cli import app
+from tests.helpers import run, write_skill
 
 
 def test_cli_root_help_short_flag() -> None:

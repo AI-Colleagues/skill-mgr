@@ -1,22 +1,11 @@
 from __future__ import annotations
 import io
 import json
-import tarfile
 from pathlib import Path
 from unittest.mock import patch
 import pytest
 from skill_mgr.services import SkillManagerService
-from tests.helpers import write_skill
-
-
-def _make_archive(files: list[tuple[str, bytes]]) -> bytes:
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
-        for relative_path, content in files:
-            info = tarfile.TarInfo(relative_path)
-            info.size = len(content)
-            archive.addfile(info, io.BytesIO(content))
-    return buffer.getvalue()
+from tests.helpers import github_archive_bytes, write_skill
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
@@ -78,7 +67,7 @@ def test_install_from_github_repo_root(
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
 
-    archive = _make_archive(
+    archive = github_archive_bytes(
         [
             (
                 "owner-repo-main/SKILL.md",
@@ -122,7 +111,7 @@ def test_install_from_github_nested_path(
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
 
-    archive = _make_archive(
+    archive = github_archive_bytes(
         [
             (
                 "owner-repo-main/skills/demo-skill/SKILL.md",
@@ -167,7 +156,7 @@ def test_validate_reports_invalid_nested_subpath(
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
     service = SkillManagerService()
 
-    archive = _make_archive(
+    archive = github_archive_bytes(
         [
             (
                 "owner-repo-main/SKILL.md",

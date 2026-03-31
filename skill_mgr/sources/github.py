@@ -1,8 +1,8 @@
 """GitHub shorthand parsing and archive materialization."""
 
 from __future__ import annotations
-import io
 import json
+import os
 import shutil
 import tarfile
 import tempfile
@@ -35,15 +35,21 @@ def parse_github_shorthand(ref: str) -> SourceDescriptor | None:
     )
 
 
-def _request(url: str, *, accept: str = "application/vnd.github+json") -> bytes:
+def _request_headers(*, accept: str) -> dict[str, str]:
     headers = {
         "Accept": accept,
         "User-Agent": "skill-mgr/0.0.1",
     }
-    request = urllib.request.Request(url, headers=headers)
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+def _urlopen(url: str, *, accept: str = "application/vnd.github+json"):
+    request = urllib.request.Request(url, headers=_request_headers(accept=accept))
     try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            return response.read()
+        return urllib.request.urlopen(request, timeout=60)
     except urllib.error.HTTPError as exc:
         code = "github_download_failed"
         if exc.code == 404:
@@ -66,6 +72,18 @@ def _request(url: str, *, accept: str = "application/vnd.github+json") -> bytes:
         ) from exc
 
 
+def _request(url: str, *, accept: str = "application/vnd.github+json") -> bytes:
+    with _urlopen(url, accept=accept) as response:
+        return response.read()
+
+
+def _download_to_file(
+    url: str, destination: Path, *, accept: str = "application/vnd.github+json"
+) -> None:
+    with _urlopen(url, accept=accept) as response, destination.open("wb") as handle:
+        shutil.copyfileobj(response, handle)
+
+
 def _repo_archive_url(repository: str) -> str:
     payload = json.loads(
         _request(f"{GITHUB_API_BASE}/repos/{repository}").decode("utf-8")
@@ -76,13 +94,13 @@ def _repo_archive_url(repository: str) -> str:
             f"GitHub repository '{repository}' did not report a default branch.",
             code="github_bad_metadata",
         )
-    return f"https://api.github.com/repos/{repository}/tarball/{default_branch}"
+    return f"{GITHUB_API_BASE}/repos/{repository}/tarball/{default_branch}"
 
 
-def _extract_tarball(archive_bytes: bytes, destination_root: Path) -> Path:
+def _extract_tarball(archive_path: Path, destination_root: Path) -> Path:
     extracted_root = destination_root / "extract"
     extracted_root.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as archive:
+    with tarfile.open(archive_path, mode="r:gz") as archive:
         members = archive.getmembers()
         for member in members:
             if member.issym() or member.islnk():
@@ -119,8 +137,9 @@ def materialize_github_source(source: SourceDescriptor) -> MaterializedSource:
 
     temp_root = Path(tempfile.mkdtemp(prefix="skill-mgr-source-"))
     try:
-        archive_bytes = _request(_repo_archive_url(source.repository))
-        repo_root = _extract_tarball(archive_bytes, temp_root)
+        archive_path = temp_root / "source.tar.gz"
+        _download_to_file(_repo_archive_url(source.repository), archive_path)
+        repo_root = _extract_tarball(archive_path, temp_root)
         skill_dir = repo_root
         if source.subpath is not None:
             relative = PurePosixPath(source.subpath)

@@ -1,15 +1,10 @@
 """Command-line interface."""
 
 from __future__ import annotations
-
-import sys
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Annotated, Any
-
 import typer
-from typer.testing import CliRunner
-
 from skill_mgr.adapters import bundled_adapter_matrix
 from skill_mgr.errors import SkillMgrError
 from skill_mgr.render import render_json, render_markdown, render_rich
@@ -190,11 +185,3 @@ def support_matrix(
         output_format=output_format,
         operation=bundled_adapter_matrix,
     )
-
-
-def run(argv: list[str] | None = None) -> int:
-    """Run the CLI and return an exit status."""
-    runner = CliRunner()
-    result = runner.invoke(app, argv or [], prog_name="skill-mgr")
-    sys.stdout.write(result.output)
-    return result.exit_code

@@ -183,7 +183,7 @@ def render_rich(payload: dict[str, Any]) -> str:
         )
     elif payload.get("action") in {"install", "update", "uninstall"}:
         _render_rich_action(console, payload)
-    elif payload.get("valid") is not None:
+    elif payload.get("action") == "validate" or payload.get("valid") is not None:
         _render_rich_validate(console, payload)
     elif payload.get("action") == "list":
         _render_rich_list(console, payload)
@@ -310,7 +310,7 @@ def render_markdown(payload: dict[str, Any]) -> str:
         )
     elif payload.get("action") in {"install", "update", "uninstall"}:
         result = _render_markdown_action(payload)
-    elif payload.get("valid") is not None:
+    elif payload.get("action") == "validate" or payload.get("valid") is not None:
         result = _render_markdown_validate(payload)
     elif payload.get("action") == "list":
         result = _render_markdown_list(payload)
