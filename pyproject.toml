@@ -32,7 +32,7 @@ name = "skill-mgr"
 readme = "README.md"
 requires-python = ">=3.12"
 url = "https://github.com/AI-Colleagues/skill-mgr"
-version = "0.0.1"
+version = "0.1.0"
 
 [project.scripts]
 skill-mgr = "skill_mgr.main:main"
