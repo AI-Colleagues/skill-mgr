@@ -8,6 +8,7 @@ import tarfile
 import tempfile
 import urllib.error
 import urllib.request
+import urllib.response
 from pathlib import Path, PurePosixPath
 from skill_mgr.errors import SkillMgrError
 from skill_mgr.models import MaterializedSource, SourceDescriptor
@@ -46,7 +47,11 @@ def _request_headers(*, accept: str) -> dict[str, str]:
     return headers
 
 
-def _urlopen(url: str, *, accept: str = "application/vnd.github+json"):
+def _urlopen(
+    url: str,
+    *,
+    accept: str = "application/vnd.github+json",
+) -> urllib.response.addinfourl:
     request = urllib.request.Request(url, headers=_request_headers(accept=accept))
     try:
         return urllib.request.urlopen(request, timeout=60)

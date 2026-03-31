@@ -1,6 +1,7 @@
 """Core skill-manager services."""
 
 from __future__ import annotations
+import builtins
 import shutil
 from pathlib import Path
 from typing import Any
@@ -51,16 +52,20 @@ class SkillManagerService:
         finally:
             self._cleanup(materialized)
 
-    def install(self, ref: str, *, targets: list[str] | None = None) -> dict[str, Any]:
+    def install(
+        self, ref: str, *, targets: builtins.list[str] | None = None
+    ) -> dict[str, Any]:
         """Install a skill across one or more targets."""
         return self._install_like("install", ref=ref, targets=targets)
 
-    def update(self, ref: str, *, targets: list[str] | None = None) -> dict[str, Any]:
+    def update(
+        self, ref: str, *, targets: builtins.list[str] | None = None
+    ) -> dict[str, Any]:
         """Update a skill across one or more targets."""
         return self._install_like("update", ref=ref, targets=targets)
 
     def uninstall(
-        self, name: str, *, targets: list[str] | None = None
+        self, name: str, *, targets: builtins.list[str] | None = None
     ) -> dict[str, Any]:
         """Uninstall a skill across one or more targets."""
         resolved_targets = resolve_targets(targets)
@@ -86,7 +91,7 @@ class SkillManagerService:
             results.append(_target_result(adapter, path=path, status="not_installed"))
         return {"skill": name, "action": "uninstall", "targets": results}
 
-    def list(self, *, targets: list[str] | None = None) -> dict[str, Any]:
+    def list(self, *, targets: builtins.list[str] | None = None) -> dict[str, Any]:
         """List installed skills across one or more targets."""
         resolved_targets = resolve_targets(targets)
         results: list[dict[str, Any]] = []
@@ -113,7 +118,9 @@ class SkillManagerService:
             )
         return {"action": "list", "targets": results}
 
-    def show(self, name: str, *, targets: list[str] | None = None) -> dict[str, Any]:
+    def show(
+        self, name: str, *, targets: builtins.list[str] | None = None
+    ) -> dict[str, Any]:
         """Show one skill across one or more targets."""
         resolved_targets = resolve_targets(targets)
         results: list[dict[str, Any]] = []
@@ -156,7 +163,7 @@ class SkillManagerService:
         action: str,
         *,
         ref: str,
-        targets: list[str] | None,
+        targets: builtins.list[str] | None,
     ) -> dict[str, Any]:
         materialized = materialize_source(ref)
         try:
@@ -210,7 +217,7 @@ class SkillManagerService:
         finally:
             self._cleanup(materialized)
 
-    def _list_target_skills(self, root: Path) -> list[dict[str, Any]]:
+    def _list_target_skills(self, root: Path) -> builtins.list[dict[str, Any]]:
         if not root.is_dir():
             return []
         rows: list[dict[str, Any]] = []
