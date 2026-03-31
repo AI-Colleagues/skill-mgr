@@ -67,6 +67,6 @@ def test_agent_adapter_to_dict_includes_paths() -> None:
     )
 
     data = adapter.to_dict()
-    assert data["install_root"] == "/tmp/custom"
-    assert data["detection_root"] == "/tmp/custom"
+    assert Path(data["install_root"]).as_posix() == "/tmp/custom"
+    assert Path(data["detection_root"]).as_posix() == "/tmp/custom"
     assert data["available"] is True
