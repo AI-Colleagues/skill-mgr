@@ -5,7 +5,7 @@ import pytest
 from skill_mgr.adapters import bundled_adapter_matrix, resolve_targets
 from skill_mgr.adapters.registry import current_os_name
 from skill_mgr.errors import SkillMgrError
-from skill_mgr.models import AgentAdapter, OSName
+from skill_mgr.models import AgentAdapter, OSName, SupportState
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
@@ -77,16 +77,16 @@ def _adapter_template(
     os_name: OSName,
     install_root: Path | None,
     detection_root: Path | None,
-    support: str = "supported",
+    support: SupportState = "supported",
 ) -> AgentAdapter:
-    install_path = (
-        {os_name: str(install_root)} if install_root is not None else {os_name: None}
-    )
-    detect_path = (
-        {os_name: str(detection_root)}
-        if detection_root is not None
-        else {os_name: None}
-    )
+    if install_root is None:
+        install_path: dict[OSName, str | None] = {os_name: None}
+    else:
+        install_path = {os_name: str(install_root)}
+    if detection_root is None:
+        detect_path: dict[OSName, str | None] = {os_name: None}
+    else:
+        detect_path = {os_name: str(detection_root)}
     return AgentAdapter(
         name=name,
         support_by_os={os_name: support},

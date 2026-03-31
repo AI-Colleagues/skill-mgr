@@ -1,10 +1,11 @@
 from __future__ import annotations
 import runpy
 import sys
+import pytest
 from skill_mgr.main import main
 
 
-def test_main_calls_app(monkeypatch) -> None:
+def test_main_calls_app(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
     def fake_app(prog_name: str) -> None:
@@ -15,7 +16,7 @@ def test_main_calls_app(monkeypatch) -> None:
     assert calls == ["skill-mgr"]
 
 
-def test_main_entry_point_runs_app(monkeypatch) -> None:
+def test_main_entry_point_runs_app(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
     def fake_app(prog_name: str) -> None:

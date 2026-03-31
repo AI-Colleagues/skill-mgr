@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from typing import cast
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -135,7 +136,9 @@ def test_run_command_raises_on_operation_error(monkeypatch: pytest.MonkeyPatch) 
             "validate", output_format=OutputFormat.JSON, operation=failing_operation
         )
     assert excinfo.value.exit_code == 1
-    assert emitted and emitted[0]["error"]["code"] == "boom"
+    assert emitted
+    error_payload = cast(dict[str, str], emitted[0]["error"])
+    assert error_payload["code"] == "boom"
 
 
 def test_run_command_raises_on_exit_status(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -1,9 +1,12 @@
 from __future__ import annotations
+import http.client
 import io
 import json
 import tarfile
 import urllib.error
+from collections.abc import Callable
 from pathlib import Path
+from typing import NoReturn
 from unittest.mock import patch
 import pytest
 from skill_mgr.errors import SkillMgrError
@@ -228,10 +231,14 @@ def test_request_headers_exclude_token_when_missing(
 
 
 def test_urlopen_maps_http_error_codes(monkeypatch: pytest.MonkeyPatch) -> None:
-    def make_error(code: int):
-        def inner(*args: object, **kwargs: object) -> None:
+    def make_error(code: int) -> Callable[..., NoReturn]:
+        def inner(*args: object, **kwargs: object) -> NoReturn:
             raise urllib.error.HTTPError(
-                "http://example", code, "msg", hdrs=None, fp=None
+                "http://example",
+                code,
+                "msg",
+                hdrs=http.client.HTTPMessage(),
+                fp=None,
             )
 
         return inner
