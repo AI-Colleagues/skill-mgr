@@ -59,9 +59,7 @@ def _render_rich_table(
 
 
 def _use_stacked_rich_table(width: int, column_count: int) -> bool:
-    if column_count >= 5 and width < 100:
-        return True
-    return column_count >= 3 and width < 60
+    return (column_count >= 5 and width < 100) or (column_count >= 3 and width < 60)
 
 
 def _render_rich_stacked_table(
@@ -76,8 +74,13 @@ def _render_rich_stacked_table(
     for index, row in enumerate(rows):
         if index > 0:
             console.print()
+
+        label = f"Row {index + 1}"
+        if row and row[0]:  # pragma: no branch
+            label = _stringify(row[0])
+
         if len(rows) > 1:
-            console.print(f"[bold]Row {index + 1}[/bold]")
+            console.print(f"[bold]{label}[/bold]")
         details = Table(
             show_header=False,
             show_lines=False,

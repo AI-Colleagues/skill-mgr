@@ -115,7 +115,7 @@ def callback(
         ),
     ] = False,
 ) -> None:
-    """Run the root CLI application."""
+    """skill-mgr CLI."""
 
 
 @app.command("install", context_settings=HELP_CONTEXT_SETTINGS)

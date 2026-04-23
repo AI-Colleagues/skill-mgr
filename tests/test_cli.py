@@ -38,7 +38,7 @@ def test_cli_root_version_long_flag(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_cli_root_version_short_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("skill_mgr.cli._cli_version", lambda: "1.2.3")
-    result = CliRunner().invoke(app, ["-v"], prog_name="skill-mgr")
+    result = CliRunner().invoke(app, ["-V"], prog_name="skill-mgr")
     assert result.exit_code == 0
     assert result.output == "1.2.3\n"
 

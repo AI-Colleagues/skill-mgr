@@ -1,5 +1,6 @@
 from __future__ import annotations
 from io import StringIO
+import pytest
 from rich.console import Console
 from skill_mgr.render import (
     _render_markdown_validate,
@@ -83,7 +84,9 @@ def test_render_rich_list_uses_agent_section_titles() -> None:
     assert "agent_not_detected" in output
 
 
-def test_render_rich_uses_detected_terminal_width(monkeypatch) -> None:
+def test_render_rich_uses_detected_terminal_width(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("COLUMNS", "50")
 
     output = render_rich(_list_payload())
