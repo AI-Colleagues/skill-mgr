@@ -29,6 +29,34 @@ def test_cli_root_help_short_flag() -> None:
     assert "skill-mgr" in result.output
 
 
+def test_cli_root_version_long_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("skill_mgr.cli._cli_version", lambda: "1.2.3")
+    result = CliRunner().invoke(app, ["--version"], prog_name="skill-mgr")
+    assert result.exit_code == 0
+    assert result.output == "1.2.3\n"
+
+
+def test_cli_root_version_short_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("skill_mgr.cli._cli_version", lambda: "1.2.3")
+    result = CliRunner().invoke(app, ["-V"], prog_name="skill-mgr")
+    assert result.exit_code == 0
+    assert result.output == "1.2.3\n"
+
+
+def test_cli_version_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    import importlib.metadata as importlib_metadata
+
+    def fake_version(name: str) -> str:
+        raise importlib_metadata.PackageNotFoundError
+
+    monkeypatch.setattr("importlib.metadata.version", fake_version)
+    # We need to clear the cache if any, but _cli_version doesn't seem to cache.
+    # Wait, _cli_version is called by _version_callback.
+    from skill_mgr.cli import _cli_version
+
+    assert _cli_version() == "unknown"
+
+
 def test_cli_command_help_short_flag() -> None:
     result = CliRunner().invoke(app, ["list", "-h"])
     assert result.exit_code == 0

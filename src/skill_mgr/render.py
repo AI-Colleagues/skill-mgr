@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import json
+import shutil
 from io import StringIO
 from typing import Any
 from rich.console import Console
@@ -40,12 +41,63 @@ def _render_rich_table(
     headers: list[str],
     rows: list[list[object]],
 ) -> None:
+    if _use_stacked_rich_table(console.width, len(headers)):
+        _render_rich_stacked_table(
+            console,
+            title=title,
+            headers=headers,
+            rows=rows,
+        )
+        return
+
     table = Table(title=title, show_lines=False)
     for header in headers:
         table.add_column(header, overflow="fold")
     for row in rows:
         table.add_row(*[_stringify(cell) for cell in row])
     console.print(table)
+
+
+def _use_stacked_rich_table(width: int, column_count: int) -> bool:
+    return (column_count >= 5 and width < 100) or (column_count >= 3 and width < 60)
+
+
+def _render_rich_stacked_table(
+    console: Console,
+    *,
+    title: str | None,
+    headers: list[str],
+    rows: list[list[object]],
+) -> None:
+    if title is not None:
+        console.print(f"[bold]{title}[/bold]")
+    for index, row in enumerate(rows):
+        if index > 0:
+            console.print()
+
+        label = f"Row {index + 1}"
+        if row and row[0]:  # pragma: no branch
+            label = _stringify(row[0])
+
+        if len(rows) > 1:
+            console.print(f"[bold]{label}[/bold]")
+        details = Table(
+            show_header=False,
+            show_lines=False,
+            expand=True,
+            pad_edge=False,
+        )
+        details.add_column("Field", style="bold", no_wrap=True)
+        details.add_column("Value", overflow="fold")
+        for header, cell in zip(headers, row, strict=True):
+            details.add_row(header, _stringify(cell))
+        console.print(details)
+
+
+def _rich_console_width(width: int | None = None) -> int:
+    if width is not None:
+        return width
+    return shutil.get_terminal_size(fallback=(120, 24)).columns
 
 
 def _render_rich_action(console: Console, payload: dict[str, Any]) -> None:
@@ -170,12 +222,12 @@ def _render_rich_support_matrix(console: Console, payload: dict[str, Any]) -> No
     )
 
 
-def render_rich(payload: dict[str, Any]) -> str:
+def render_rich(payload: dict[str, Any], *, width: int | None = None) -> str:
     """Render a payload using Rich tables and pretty output."""
     console = Console(
         record=True,
         force_terminal=False,
-        width=120,
+        width=_rich_console_width(width),
         file=StringIO(),
     )
     if "error" in payload:

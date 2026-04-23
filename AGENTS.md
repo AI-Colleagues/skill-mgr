@@ -1,13 +1,13 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Core package code lives in `skill_mgr/`. Keep CLI entrypoints in `skill_mgr/cli.py` and `skill_mgr/main.py`, domain models in `skill_mgr/models.py`, service orchestration in `skill_mgr/services/`, source resolution in `skill_mgr/sources/`, adapter logic in `skill_mgr/adapters/`, and `SKILL.md` validation in `skill_mgr/validation/`. Tests live in `tests/` and generally mirror the package surface, for example `tests/test_cli.py` for `skill_mgr/cli.py`. Planning notes are in `project/`; user docs are in `README.md` and `docs/`.
+Core package code lives in `src/skill_mgr/`. Keep CLI entrypoints in `src/skill_mgr/cli.py` and `src/skill_mgr/main.py`, domain models in `src/skill_mgr/models.py`, service orchestration in `src/skill_mgr/services/`, source resolution in `src/skill_mgr/sources/`, adapter logic in `src/skill_mgr/adapters/`, and `SKILL.md` validation in `src/skill_mgr/validation/`. Tests live in `tests/` and generally mirror the package surface, for example `tests/test_cli.py` for `src/skill_mgr/cli.py`. Planning notes are in `project/`; user docs are in `README.md` and `docs/`.
 
 ## Build, Test, and Development Commands
 Use Python 3.12 and install dev tooling with `uv sync --all-groups`. Key commands:
 
 - `make format`: run Ruff formatting and fix import/unused-import issues.
-- `make lint`: run `ruff check .`, `mypy skill_mgr`, and `ruff format . --check`.
+- `make lint`: run `ruff check .`, `mypy src/`, and `ruff format . --check`.
 - `make test`: run `pytest --cov --cov-report term-missing tests/`.
 - `make doc`: serve MkDocs locally on `0.0.0.0:8080`.
 - `uv run skill-mgr -h`: exercise the CLI from source without installing.

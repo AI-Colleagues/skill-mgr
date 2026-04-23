@@ -2,10 +2,17 @@ name: CI
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
     tags:
       - "v*"
   pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
 
 permissions:
   contents: read
@@ -32,7 +39,7 @@ jobs:
       - run: uv sync --all-groups
       - run: uv run ruff format --check .
       - run: uv run ruff check .
-      - run: uv run mypy .
+      - run: uv run mypy src/
       - name: Run tests with coverage
         if: matrix.os == 'ubuntu-latest'
         run: uv run pytest --cov --cov-report term-missing --cov-report html:coverage-html tests/

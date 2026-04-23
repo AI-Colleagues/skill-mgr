@@ -1,5 +1,6 @@
 from __future__ import annotations
 from io import StringIO
+import pytest
 from rich.console import Console
 from skill_mgr.render import (
     _render_markdown_validate,
@@ -81,6 +82,16 @@ def test_render_rich_list_uses_agent_section_titles() -> None:
     assert "Description" in output
     assert "No installed skills." in output
     assert "agent_not_detected" in output
+
+
+def test_render_rich_uses_detected_terminal_width(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("COLUMNS", "50")
+
+    output = render_rich(_list_payload())
+
+    assert max(len(line) for line in output.splitlines()) <= 50
 
 
 def test_render_markdown_list_uses_agent_section_titles() -> None:
@@ -169,6 +180,29 @@ def test_render_rich_show_and_support_matrix_variants() -> None:
     matrix_output = render_rich(support_payload)
     assert "Support Matrix" in matrix_output
     assert "claude" in matrix_output
+
+
+def test_render_rich_support_matrix_uses_stacked_layout_on_narrow_width() -> None:
+    payload = {
+        "action": "support-matrix",
+        "targets": [
+            {
+                "adapter": "claude",
+                "windows": "supported",
+                "linux": "supported",
+                "macos": "supported",
+                "install_root": "/tmp/.claude/skills",
+                "notes": "Long notes stay readable in stacked mode.",
+            }
+        ],
+    }
+
+    output = render_rich(payload, width=70)
+
+    assert "Support Matrix" in output
+    assert "Adapter" in output
+    assert "/tmp/.claude/skills" in output
+    assert "Long notes stay readable in stacked mode." in output
 
 
 def test_render_rich_defaults_to_pretty() -> None:
@@ -289,3 +323,20 @@ def test_render_markdown_validate_helper_handles_missing_skill_and_errors() -> N
     text = _render_markdown_validate(payload)
     assert "- name:" not in text
     assert "### Errors" not in text
+
+
+def test_render_rich_stacked_table_no_title() -> None:
+    from skill_mgr.render import _render_rich_stacked_table
+
+    console = Console(record=True, force_terminal=False, width=80, file=StringIO())
+    _render_rich_stacked_table(
+        console,
+        title=None,
+        headers=["H1", "H2"],
+        rows=[["V1", "V2"]],
+    )
+    output = console.export_text()
+    assert "H1" in output
+    assert "V1" in output
+    assert "H2" in output
+    assert "V2" in output
