@@ -55,7 +55,6 @@ def _render_rich_action(console: Console, payload: dict[str, Any]) -> None:
         [
             target.get("target", ""),
             target.get("status", ""),
-            target.get("path", ""),
             target.get("message", ""),
         ]
         for target in payload.get("targets", [])
@@ -63,7 +62,7 @@ def _render_rich_action(console: Console, payload: dict[str, Any]) -> None:
     _render_rich_table(
         console,
         title="Targets",
-        headers=["Target", "Status", "Path", "Message"],
+        headers=["Target", "Status", "Message"],
         rows=rows,
     )
 
@@ -117,14 +116,18 @@ def _render_rich_list(console: Console, payload: dict[str, Any]) -> None:
             console.print(target.get("message", ""))
             continue
         rows = [
-            [skill.get("name", ""), skill.get("description", ""), skill.get("path", "")]
+            [
+                skill.get("name", ""),
+                skill.get("version", ""),
+                skill.get("description", ""),
+            ]
             for skill in target.get("skills", [])
         ]
         if rows:
             _render_rich_table(
                 console,
                 title=section_title(target),
-                headers=["Name", "Description", "Path"],
+                headers=["Name", "Version", "Description"],
                 rows=rows,
             )
         else:
@@ -143,7 +146,6 @@ def _render_rich_show(console: Console, payload: dict[str, Any]) -> None:
         rows = [
             ["Name", metadata.get("name", "")],
             ["Description", metadata.get("description", "")],
-            ["Path", target.get("path", "")],
         ]
         _render_rich_table(console, title=None, headers=["Field", "Value"], rows=rows)
 
@@ -202,12 +204,11 @@ def _render_markdown_action(payload: dict[str, Any]) -> str:
         [
             target.get("target", ""),
             target.get("status", ""),
-            target.get("path", ""),
             target.get("message", ""),
         ]
         for target in payload.get("targets", [])
     ]
-    table = render_markdown_table(["Target", "Status", "Path", "Message"], rows)
+    table = render_markdown_table(["Target", "Status", "Message"], rows)
     return f"{heading}\n\n{table}"
 
 
@@ -254,11 +255,17 @@ def _render_markdown_list(payload: dict[str, Any]) -> str:
             blocks.append(target.get("message", ""))
             continue
         rows = [
-            [skill.get("name", ""), skill.get("description", ""), skill.get("path", "")]
+            [
+                skill.get("name", ""),
+                skill.get("version", ""),
+                skill.get("description", ""),
+            ]
             for skill in target.get("skills", [])
         ]
         if rows:
-            blocks.append(render_markdown_table(["Name", "Description", "Path"], rows))
+            blocks.append(
+                render_markdown_table(["Name", "Version", "Description"], rows)
+            )
         else:
             blocks.append("No installed skills.")
     return "\n".join(blocks)
@@ -275,7 +282,6 @@ def _render_markdown_show(payload: dict[str, Any]) -> str:
         rows = [
             ["Name", metadata.get("name", "")],
             ["Description", metadata.get("description", "")],
-            ["Path", target.get("path", "")],
         ]
         blocks.append(render_markdown_table(["Field", "Value"], rows))
     return "\n".join(blocks)

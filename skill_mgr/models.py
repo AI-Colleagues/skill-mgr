@@ -25,6 +25,7 @@ class SkillMetadata:
 
     name: str
     description: str
+    version: str | None = None
     license: str | None = None
     compatibility: str | None = None
     metadata: dict[str, Any] | None = None

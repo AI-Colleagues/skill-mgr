@@ -119,6 +119,14 @@ def validate_skill_directory(
     )
     errors.extend(description_errors)
 
+    version_value, version_errors = _validate_optional_string(
+        frontmatter,
+        field="version",
+        code="invalid_version",
+        message="version must be a string when present.",
+    )
+    errors.extend(version_errors)
+
     license_value, license_errors = _validate_optional_string(
         frontmatter,
         field="license",
@@ -160,6 +168,7 @@ def validate_skill_directory(
     known_fields = {
         "name",
         "description",
+        "version",
         "license",
         "compatibility",
         "metadata",
@@ -175,6 +184,7 @@ def validate_skill_directory(
         SkillMetadata(
             name=normalized_name or "",
             description=normalized_description or "",
+            version=version_value,
             license=license_value,
             compatibility=compatibility,
             metadata=metadata,

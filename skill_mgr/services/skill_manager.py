@@ -193,19 +193,20 @@ class SkillManagerService:
                     )
                     continue
                 assert path is not None
-                if action == "install" and path.exists():
+                if path.exists() and (path.is_symlink() or not path.is_dir()):
                     results.append(
                         _target_result(
                             adapter,
                             path=path,
                             status="error",
-                            message="already_installed",
+                            message=(
+                                "Install target exists but is not a directory; "
+                                "remove it and retry."
+                            ),
                         )
                     )
                     continue
-                next_status = (
-                    "updated" if path.exists() and action == "update" else "installed"
-                )
+                next_status = "updated" if path.exists() else "installed"
                 atomic_copytree(materialized.directory, path)
                 results.append(_target_result(adapter, path=path, status=next_status))
             return {
@@ -228,6 +229,7 @@ class SkillManagerService:
             rows.append(
                 {
                     "name": metadata.name,
+                    "version": metadata.version,
                     "description": metadata.description,
                     "path": str(candidate),
                     "status": "installed",

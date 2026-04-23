@@ -232,7 +232,7 @@ def test_install_explicit_target_bypasses_detection(
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
-def test_install_reports_already_installed(
+def test_install_updates_when_already_installed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
@@ -246,10 +246,44 @@ def test_install_reports_already_installed(
     service.install(str(source))
     payload = service.install(str(source))
 
-    assert all(target["status"] == "error" for target in payload["targets"])
-    assert all(
-        target["message"] == "already_installed" for target in payload["targets"]
+    assert all(target["status"] == "updated" for target in payload["targets"])
+
+
+@pytest.mark.parametrize("existing_kind", ["file", "symlink"])
+def test_install_reports_error_when_target_is_not_directory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, existing_kind: str
+) -> None:
+    install_root = tmp_path / "install_root"
+    install_root.mkdir()
+    target = install_root / "demo-skill"
+    if existing_kind == "file":
+        target.write_text("not a directory", encoding="utf-8")
+    else:
+        source_file = tmp_path / "elsewhere.txt"
+        source_file.write_text("linked file", encoding="utf-8")
+        target.symlink_to(source_file)
+
+    adapter = AgentAdapter(
+        name="custom",
+        support_by_os={"linux": "supported"},
+        install_root_by_os={"linux": str(install_root)},
+        detection_root_by_os={"linux": str(install_root)},
+        current_os="linux",
+        install_root=install_root,
+        detection_root=install_root,
+        available=True,
     )
+    monkeypatch.setattr(
+        "skill_mgr.services.skill_manager.resolve_targets",
+        lambda targets=None: [adapter],
+    )
+    service = SkillManagerService()
+    source = write_skill(tmp_path / "source" / "demo-skill")
+
+    payload = service.install(str(source))
+
+    assert payload["targets"][0]["status"] == "error"
+    assert "not a directory" in payload["targets"][0]["message"]
 
 
 def test_uninstall_reports_not_installed_when_missing(
