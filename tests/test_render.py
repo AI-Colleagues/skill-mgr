@@ -21,6 +21,7 @@ def _list_payload() -> dict[str, object]:
                 "skills": [
                     {
                         "name": "orcheo",
+                        "version": "1.2.0",
                         "description": "Orcheo workflow helper",
                         "path": "/tmp/.claude/skills/orcheo",
                     }
@@ -33,11 +34,13 @@ def _list_payload() -> dict[str, object]:
                 "skills": [
                     {
                         "name": "data-coffee",
+                        "version": None,
                         "description": "Data Coffee helper",
                         "path": "/tmp/.codex/skills/data-coffee",
                     },
                     {
                         "name": "orcheo",
+                        "version": "1.2.0",
                         "description": "Orcheo workflow helper",
                         "path": "/tmp/.codex/skills/orcheo",
                     },
@@ -74,8 +77,8 @@ def test_render_rich_list_uses_agent_section_titles() -> None:
     assert "openclaw (skipped_unavailable)" in output
     assert "orcheo (available, 0 skills)" in output
     assert "Name" in output
+    assert "Version" in output
     assert "Description" in output
-    assert "Path" in output
     assert "No installed skills." in output
     assert "agent_not_detected" in output
 
@@ -88,7 +91,7 @@ def test_render_markdown_list_uses_agent_section_titles() -> None:
     assert "### codex (available, 2 skills)" in output
     assert "### openclaw (skipped_unavailable)" in output
     assert "### orcheo (available, 0 skills)" in output
-    assert "| Name | Description | Path |" in output
+    assert "| Name | Version | Description |" in output
     assert "No installed skills." in output
     assert "agent_not_detected" in output
 
@@ -189,7 +192,7 @@ def test_render_markdown_action_payload() -> None:
     }
     result = render_markdown(payload)
     assert "## install" in result
-    assert "| Target | Status | Path | Message |" in result
+    assert "| Target | Status | Message |" in result
 
 
 def test_render_markdown_validate_with_errors() -> None:

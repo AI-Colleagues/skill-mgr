@@ -232,7 +232,7 @@ def test_install_explicit_target_bypasses_detection(
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
-def test_install_reports_already_installed(
+def test_install_updates_when_already_installed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
@@ -246,10 +246,7 @@ def test_install_reports_already_installed(
     service.install(str(source))
     payload = service.install(str(source))
 
-    assert all(target["status"] == "error" for target in payload["targets"])
-    assert all(
-        target["message"] == "already_installed" for target in payload["targets"]
-    )
+    assert all(target["status"] == "updated" for target in payload["targets"])
 
 
 def test_uninstall_reports_not_installed_when_missing(
