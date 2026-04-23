@@ -2,7 +2,7 @@
 
 lint:
 	ruff check .
-	mypy skill_mgr
+	mypy src/
 	ruff format . --check
 
 format:

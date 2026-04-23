@@ -19,30 +19,30 @@ Windows, Linux, and macOS are all first-class platforms in this design. That doe
 
 ## Components
 
-- **CLI (`skill_mgr.cli` or equivalent)**
+- **CLI (`src/skill_mgr.cli` or equivalent)**
   - Exposes `install`, `update`, `uninstall`, `validate`, `list`, and `show`.
   - Normalizes flags, human vs JSON rendering, and exit codes.
 
-- **Source resolver (`skill_mgr.sources`)**
+- **Source resolver (`src/skill_mgr.sources`)**
   - Parses input refs into `LocalSource` or `GitHubSource`.
   - Checks for an existing normalized local path before attempting GitHub shorthand parsing.
   - Downloads and safely extracts GitHub archives into a temp directory when needed.
   - Resolves nested repo paths from `owner/repo/path/to/skill`.
 
-- **Skill validator (`skill_mgr.validation`)**
+- **Skill validator (`src/skill_mgr.validation`)**
   - Verifies `SKILL.md` exists and is structurally valid.
   - Produces normalized metadata used by install and show operations.
 
-- **Adapter registry (`skill_mgr.adapters`)**
+- **Adapter registry (`src/skill_mgr.adapters`)**
   - Registers supported agent adapters keyed by stable names such as `claude`, `codex`, `openclaw`, and `orcheo`.
   - Resolves `all`, deduplicates repeated targets, and filters unavailable adapters.
   - Stores per-OS install root rules and support metadata for Windows, Linux, and macOS.
 
-- **Install engine (`skill_mgr.services`)**
+- **Install engine (`src/skill_mgr.services`)**
   - Orchestrates install, update, uninstall, list, and show operations.
   - Reuses a materialized skill directory across all target operations in a single command.
 
-- **Filesystem layer (`skill_mgr.fs`)**
+- **Filesystem layer (`src/skill_mgr.fs`)**
   - Owns safe copy, replace, and delete helpers.
   - Guards against deleting outside adapter-managed roots.
 

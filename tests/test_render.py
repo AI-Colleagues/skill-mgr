@@ -320,3 +320,20 @@ def test_render_markdown_validate_helper_handles_missing_skill_and_errors() -> N
     text = _render_markdown_validate(payload)
     assert "- name:" not in text
     assert "### Errors" not in text
+
+
+def test_render_rich_stacked_table_no_title() -> None:
+    from skill_mgr.render import _render_rich_stacked_table
+
+    console = Console(record=True, force_terminal=False, width=80, file=StringIO())
+    _render_rich_stacked_table(
+        console,
+        title=None,
+        headers=["H1", "H2"],
+        rows=[["V1", "V2"]],
+    )
+    output = console.export_text()
+    assert "H1" in output
+    assert "V1" in output
+    assert "H2" in output
+    assert "V2" in output

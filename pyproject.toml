@@ -52,7 +52,7 @@ exclude_lines = [
 [tool.coverage.run]
 branch = true
 command_line = "-m pytest"
-source = ["skill_mgr"]
+source = ["src/skill_mgr"]
 
 [tool.hatch.build.targets.wheel]
 exclude = [
