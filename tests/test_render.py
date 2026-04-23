@@ -83,6 +83,14 @@ def test_render_rich_list_uses_agent_section_titles() -> None:
     assert "agent_not_detected" in output
 
 
+def test_render_rich_uses_detected_terminal_width(monkeypatch) -> None:
+    monkeypatch.setenv("COLUMNS", "50")
+
+    output = render_rich(_list_payload())
+
+    assert max(len(line) for line in output.splitlines()) <= 50
+
+
 def test_render_markdown_list_uses_agent_section_titles() -> None:
     output = render_markdown(_list_payload())
 
@@ -169,6 +177,29 @@ def test_render_rich_show_and_support_matrix_variants() -> None:
     matrix_output = render_rich(support_payload)
     assert "Support Matrix" in matrix_output
     assert "claude" in matrix_output
+
+
+def test_render_rich_support_matrix_uses_stacked_layout_on_narrow_width() -> None:
+    payload = {
+        "action": "support-matrix",
+        "targets": [
+            {
+                "adapter": "claude",
+                "windows": "supported",
+                "linux": "supported",
+                "macos": "supported",
+                "install_root": "/tmp/.claude/skills",
+                "notes": "Long notes stay readable in stacked mode.",
+            }
+        ],
+    }
+
+    output = render_rich(payload, width=70)
+
+    assert "Support Matrix" in output
+    assert "Adapter" in output
+    assert "/tmp/.claude/skills" in output
+    assert "Long notes stay readable in stacked mode." in output
 
 
 def test_render_rich_defaults_to_pretty() -> None:

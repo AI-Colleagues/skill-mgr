@@ -1,6 +1,7 @@
 """Command-line interface."""
 
 from __future__ import annotations
+import importlib.metadata as importlib_metadata
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Annotated, Any
@@ -17,6 +18,20 @@ app = typer.Typer(
     help="Install, inspect, and manage agent skills.",
     context_settings=HELP_CONTEXT_SETTINGS,
 )
+
+
+def _cli_version() -> str:
+    try:
+        return importlib_metadata.version("skill-mgr")
+    except importlib_metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def _version_callback(value: bool) -> None:
+    if not value:
+        return
+    typer.echo(_cli_version())
+    raise typer.Exit()
 
 
 class OutputFormat(StrEnum):
@@ -85,6 +100,22 @@ def _run_command(
     exit_code = _exit_status(command, payload)
     if exit_code:
         raise typer.Exit(code=exit_code)
+
+
+@app.callback()
+def callback(
+    version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            "-v",
+            callback=_version_callback,
+            help="Show the skill-mgr version and exit.",
+            is_eager=True,
+        ),
+    ] = False,
+) -> None:
+    """Run the root CLI application."""
 
 
 @app.command("install", context_settings=HELP_CONTEXT_SETTINGS)
