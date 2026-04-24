@@ -14,6 +14,7 @@ def test_resolve_targets_all_supported(os_name: OSName, tmp_path: Path) -> None:
     assert [target.name for target in targets] == [
         "claude",
         "codex",
+        "gemini",
         "openclaw",
         "orcheo",
     ]
@@ -26,26 +27,35 @@ def test_resolve_targets_default_only_uses_detected_agents(
 ) -> None:
     (tmp_path / ".claude").mkdir(parents=True)
     (tmp_path / ".codex").mkdir(parents=True)
+    (tmp_path / ".gemini").mkdir(parents=True)
     targets = resolve_targets(None, current_os=os_name, home=tmp_path)
 
     assert [target.name for target in targets] == [
         "claude",
         "codex",
+        "gemini",
         "openclaw",
         "orcheo",
     ]
-    assert [target.available for target in targets] == [True, True, False, False]
-    assert targets[2].availability_reason == "agent_not_detected"
+    assert [target.available for target in targets] == [
+        True,
+        True,
+        True,
+        False,
+        False,
+    ]
+    assert targets[2].availability_reason is None
     assert targets[3].availability_reason == "agent_not_detected"
+    assert targets[4].availability_reason == "agent_not_detected"
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
 def test_resolve_targets_explicit_target_bypasses_detection(
     os_name: OSName, tmp_path: Path
 ) -> None:
-    targets = resolve_targets(["openclaw"], current_os=os_name, home=tmp_path)
+    targets = resolve_targets(["gemini"], current_os=os_name, home=tmp_path)
 
-    assert [target.name for target in targets] == ["openclaw"]
+    assert [target.name for target in targets] == ["gemini"]
     assert targets[0].available is True
     assert targets[0].availability_reason is None
 
@@ -66,6 +76,7 @@ def test_support_matrix_lists_all_bundled_adapters() -> None:
     assert [row["adapter"] for row in payload["targets"]] == [
         "claude",
         "codex",
+        "gemini",
         "openclaw",
         "orcheo",
     ]

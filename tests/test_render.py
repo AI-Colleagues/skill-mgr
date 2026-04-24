@@ -48,6 +48,12 @@ def _list_payload() -> dict[str, object]:
                 ],
             },
             {
+                "target": "gemini",
+                "status": "available",
+                "message": None,
+                "skills": [],
+            },
+            {
                 "target": "openclaw",
                 "status": "skipped_unavailable",
                 "message": "agent_not_detected",
@@ -75,6 +81,7 @@ def test_render_rich_list_uses_agent_section_titles() -> None:
     assert "Installed Skills" in output
     assert "claude (available, 1 skill)" in output
     assert "codex (available, 2 skills)" in output
+    assert "gemini (available, 0 skills)" in output
     assert "openclaw (skipped_unavailable)" in output
     assert "orcheo (available, 0 skills)" in output
     assert "Name" in output
@@ -100,6 +107,7 @@ def test_render_markdown_list_uses_agent_section_titles() -> None:
     assert "## Installed Skills" in output
     assert "### claude (available, 1 skill)" in output
     assert "### codex (available, 2 skills)" in output
+    assert "### gemini (available, 0 skills)" in output
     assert "### openclaw (skipped_unavailable)" in output
     assert "### orcheo (available, 0 skills)" in output
     assert "| Name | Version | Description |" in output

@@ -75,6 +75,7 @@ The bundled adapters currently publish this matrix:
 |---------|---------|-------|-------|----------------------|-------|
 | `claude` | supported | supported | supported | `~/.claude/skills` | Home-relative managed skill root used by the adapter |
 | `codex` | supported | supported | supported | `~/.codex/skills` | Matches the local Codex skill layout used by the app/CLI |
+| `gemini` | supported | supported | supported | `~/.gemini/skills` | Matches Gemini's managed local skills directory |
 | `openclaw` | supported | supported | supported | `~/.openclaw/skills` | Matches OpenClaw's documented managed/local skills directory |
 | `orcheo` | supported | supported | supported | `~/.orcheo/skills` | Matches Orcheo's managed local skills directory |
 
@@ -85,7 +86,7 @@ Platform semantics:
 - `unknown`: the adapter root is not yet defined and the target is skipped with `unknown_install_root`.
 - `agent_not_detected`: the adapter is bundled, but its home directory was not found during default target selection.
 
-Current bundled adapters all map to explicit home-relative roots. Explicit `--target all` expands to `claude`, `codex`, `openclaw`, and `orcheo` on Windows, Linux, and macOS, while the default target set only includes agents detected on the current machine.
+Current bundled adapters all map to explicit home-relative roots. Explicit `--target all` expands to `claude`, `codex`, `gemini`, `openclaw`, and `orcheo` on Windows, Linux, and macOS, while the default target set only includes agents detected on the current machine.
 
 ## `SKILL.md` Contract
 
