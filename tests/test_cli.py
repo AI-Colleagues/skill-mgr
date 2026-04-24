@@ -88,6 +88,7 @@ def test_cli_support_matrix_markdown(capsys: pytest.CaptureFixture[str]) -> None
     captured = capsys.readouterr()
     assert status == 0
     assert "| Adapter |" in captured.out
+    assert "gemini" in captured.out
     assert "orcheo" in captured.out
 
 
@@ -104,6 +105,7 @@ def test_cli_support_matrix_rich(capsys: pytest.CaptureFixture[str]) -> None:
     captured = capsys.readouterr()
     assert status == 0
     assert "Support Matrix" in captured.out
+    assert "gemini" in captured.out
     assert "openclaw" in captured.out
     assert "orcheo" in captured.out
 

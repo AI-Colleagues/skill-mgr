@@ -45,6 +45,24 @@ _BUNDLED_ADAPTER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "Matches the local Codex skills directory used by the desktop app and CLI."
         ),
     },
+    "gemini": {
+        "support_by_os": {
+            "windows": "supported",
+            "linux": "supported",
+            "macos": "supported",
+        },
+        "detection_root_by_os": {
+            "windows": "{home}/.gemini",
+            "linux": "{home}/.gemini",
+            "macos": "{home}/.gemini",
+        },
+        "install_root_by_os": {
+            "windows": "{home}/.gemini/skills",
+            "linux": "{home}/.gemini/skills",
+            "macos": "{home}/.gemini/skills",
+        },
+        "notes": "Matches Gemini's managed local skills directory.",
+    },
     "openclaw": {
         "support_by_os": {
             "windows": "supported",

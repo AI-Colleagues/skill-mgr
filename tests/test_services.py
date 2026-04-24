@@ -20,7 +20,7 @@ def test_install_update_uninstall_local_flow(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
-    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+    for marker in (".claude", ".codex", ".gemini", ".openclaw", ".orcheo"):
         (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
@@ -33,6 +33,7 @@ def test_install_update_uninstall_local_flow(
         "installed",
         "installed",
         "installed",
+        "installed",
     ]
 
     update_payload = service.update(str(source))
@@ -41,10 +42,12 @@ def test_install_update_uninstall_local_flow(
         "updated",
         "updated",
         "updated",
+        "updated",
     ]
 
     show_payload = service.show("demo-skill")
     assert [target["status"] for target in show_payload["targets"]] == [
+        "installed",
         "installed",
         "installed",
         "installed",
@@ -60,6 +63,7 @@ def test_install_update_uninstall_local_flow(
         "uninstalled",
         "uninstalled",
         "uninstalled",
+        "uninstalled",
     ]
 
 
@@ -68,7 +72,7 @@ def test_install_from_github_repo_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
-    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+    for marker in (".claude", ".codex", ".gemini", ".openclaw", ".orcheo"):
         (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
@@ -112,7 +116,7 @@ def test_install_from_github_nested_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
-    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+    for marker in (".claude", ".codex", ".gemini", ".openclaw", ".orcheo"):
         (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
@@ -157,7 +161,7 @@ def test_validate_reports_invalid_nested_subpath(
     os_name: str,
 ) -> None:
     home = tmp_path / "home"
-    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+    for marker in (".claude", ".codex", ".gemini", ".openclaw", ".orcheo"):
         (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
@@ -197,7 +201,7 @@ def test_install_default_skips_undetected_agents(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
-    for marker in (".claude", ".codex"):
+    for marker in (".claude", ".codex", ".gemini"):
         (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
@@ -209,11 +213,12 @@ def test_install_default_skips_undetected_agents(
     assert [target["status"] for target in payload["targets"]] == [
         "installed",
         "installed",
+        "installed",
         "skipped_unavailable",
         "skipped_unavailable",
     ]
-    assert payload["targets"][2]["message"] == "agent_not_detected"
     assert payload["targets"][3]["message"] == "agent_not_detected"
+    assert payload["targets"][4]["message"] == "agent_not_detected"
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux", "macos"])
@@ -226,7 +231,7 @@ def test_install_explicit_target_bypasses_detection(
     service = SkillManagerService()
     source = write_skill(tmp_path / "source" / "demo-skill")
 
-    payload = service.install(str(source), targets=["openclaw"])
+    payload = service.install(str(source), targets=["gemini"])
 
     assert [target["status"] for target in payload["targets"]] == ["installed"]
 
@@ -236,7 +241,7 @@ def test_install_updates_when_already_installed(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, os_name: str
 ) -> None:
     home = tmp_path / "home"
-    for marker in (".claude", ".codex", ".openclaw", ".orcheo"):
+    for marker in (".claude", ".codex", ".gemini", ".openclaw", ".orcheo"):
         (home / marker).mkdir(parents=True)
     monkeypatch.setattr("skill_mgr.adapters.registry.current_os_name", lambda: os_name)
     monkeypatch.setattr("pathlib.Path.home", lambda: home)
